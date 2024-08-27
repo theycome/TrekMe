@@ -13,11 +13,13 @@ import com.peterlaurence.trekme.core.map.domain.models.ErrorIgnLicense
 import com.peterlaurence.trekme.core.map.domain.models.ErrorWmtsLicense
 import com.peterlaurence.trekme.core.map.domain.models.FreeLicense
 import com.peterlaurence.trekme.core.map.domain.models.Map
+import com.peterlaurence.trekme.core.map.domain.models.MapUpdateFinished
 import com.peterlaurence.trekme.core.map.domain.models.ValidIgnLicense
 import com.peterlaurence.trekme.core.map.domain.models.ValidWmtsLicense
 import com.peterlaurence.trekme.core.map.domain.repository.MapRepository
 import com.peterlaurence.trekme.core.orientation.model.OrientationSource
 import com.peterlaurence.trekme.core.settings.Settings
+import com.peterlaurence.trekme.di.ApplicationScope
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.events.recording.GpxRecordEvents
 import com.peterlaurence.trekme.features.common.domain.interactors.MapComposeTileStreamProviderInteractor
@@ -50,7 +52,9 @@ import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.Route
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.ScaleIndicatorLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.ScaleIndicatorState
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.TrackFollowLayer
+import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -63,6 +67,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -72,9 +77,10 @@ import kotlinx.coroutines.launch
 import ovh.plrapps.mapcompose.api.addLayer
 import ovh.plrapps.mapcompose.api.maxScale
 import ovh.plrapps.mapcompose.api.onMarkerClick
+import ovh.plrapps.mapcompose.api.onMarkerLongPress
+import ovh.plrapps.mapcompose.api.reloadTiles
 import ovh.plrapps.mapcompose.api.rotateTo
 import ovh.plrapps.mapcompose.api.scale
-import ovh.plrapps.mapcompose.api.shouldLoopScale
 import ovh.plrapps.mapcompose.ui.state.MapState
 import java.util.UUID
 import javax.inject.Inject
@@ -96,10 +102,12 @@ class MapViewModel @Inject constructor(
     val settings: Settings,
     private val mapFeatureEvents: MapFeatureEvents,
     gpxRecordEvents: GpxRecordEvents,
-    private val appEventBus: AppEventBus,
+    appEventBus: AppEventBus,
     private val mapLicenseInteractor: MapLicenseInteractor,
     hasOneExtendedOfferInteractor: HasOneExtendedOfferInteractor,
     private val elevationFixInteractor: ElevationFixInteractor,
+    private val downloadRepository: DownloadRepository,
+    @ApplicationScope processScope: CoroutineScope,
     app: Application
 ) : ViewModel() {
     private val dataStateFlow = MutableSharedFlow<DataState>(1, 0, BufferOverflow.DROP_OLDEST)
@@ -139,6 +147,7 @@ class MapViewModel @Inject constructor(
         viewModelScope,
         dataStateFlow,
         markerInteractor,
+        goToMarkerFlow = mapFeatureEvents.goToMarker,
         onMarkerEdit = { marker, mapId ->
             mapFeatureEvents.postPlaceableEvent(MarkerEditEvent(marker, mapId))
         },
@@ -151,6 +160,7 @@ class MapViewModel @Inject constructor(
         viewModelScope,
         dataStateFlow,
         excursionInteractor,
+        goToExcursionWaypointFlow = mapFeatureEvents.goToExcursionWaypoint,
         onWaypointEdit = { waypoint, excursionId ->
             mapFeatureEvents.postPlaceableEvent(ExcursionWaypointEditEvent(waypoint, excursionId))
         },
@@ -171,12 +181,13 @@ class MapViewModel @Inject constructor(
     )
 
     val trackFollowLayer = TrackFollowLayer(
-        viewModelScope,
-        dataStateFlow,
-        trackFollowRepository,
-        mapFeatureEvents,
-        app.applicationContext,
-        appEventBus,
+        scope = viewModelScope,
+        processScope = processScope,
+        dataStateFlow = dataStateFlow,
+        trackFollowRepository = trackFollowRepository,
+        mapFeatureEvents = mapFeatureEvents,
+        appContext = app.applicationContext,
+        appEventBus = appEventBus,
         onTrackSelected = {
             viewModelScope.launch {
                 _events.send(MapEvent.TRACK_TO_FOLLOW_SELECTED)
@@ -227,17 +238,19 @@ class MapViewModel @Inject constructor(
         settings.getMaxScale().combine(dataStateFlow) { maxScale, dataState ->
             dataState.mapState.maxScale = maxScale
         }.launchIn(viewModelScope)
-    }
 
-    /* region events */
-    fun onMainMenuClick() {
-        appEventBus.openDrawer()
+        /* */
+        viewModelScope.launch {
+            downloadRepository.downloadEvent.collect { event ->
+                if (event is MapUpdateFinished) {
+                    val (map, mapState) = dataStateFlow.firstOrNull() ?: return@collect
+                    if (map.id == event.mapId) {
+                        mapState.reloadTiles()
+                    }
+                }
+            }
+        }
     }
-
-    fun onShopClick() {
-        appEventBus.navigateTo(AppEventBus.NavDestination.Shop)
-    }
-    /* endregion */
 
     suspend fun checkMapLicense() = coroutineScope {
         val map = mapRepository.getCurrentMap() ?: return@coroutineScope
@@ -325,17 +338,26 @@ class MapViewModel @Inject constructor(
         }
 
         /* region Configuration */
-        mapState.onMarkerClick { id, x, y ->
+        val markerHitHandler = l@{ id: String, x: Double, y: Double ->
             val landmarkHandled = landmarkLayer.onMarkerTap(mapState, map.id, id, x, y)
-            if (landmarkHandled) return@onMarkerClick
+            if (landmarkHandled) return@l
 
             val markerHandled = markerLayer.onMarkerTap(mapState, map.id, id, x, y)
-            if (markerHandled) return@onMarkerClick
+            if (markerHandled) return@l
 
             val excursionWptHandled = excursionWaypointLayer.onMarkerTap(mapState, map.id, id, x, y)
-            if (excursionWptHandled) return@onMarkerClick
+            if (excursionWptHandled) return@l
 
             beaconLayer.onMarkerTap(mapState, map.id, id, x, y)
+        }
+
+        mapState.onMarkerClick { id, x, y ->
+            markerHitHandler(id, x, y)
+        }
+
+        // Do the same thing as click for long-press
+        mapState.onMarkerLongPress { id, x, y ->
+            markerHitHandler(id, x, y)
         }
         /* endregion */
 
@@ -371,7 +393,7 @@ data class MapUiState(
     val landmarkLinesState: LandmarkLinesState,
     val distanceLineState: DistanceLineState,
     val scaleIndicatorState: ScaleIndicatorState,
-    val mapName: String
+    val mapNameFlow: StateFlow<String>
 ) : UiState
 
 object Loading : UiState

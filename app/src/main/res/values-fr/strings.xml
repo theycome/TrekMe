@@ -23,17 +23,35 @@
     <string name="calibration_projection_saved_ok">Projection changée</string>
     <string name="ok_dialog">Ok</string>
     <string name="no_dialog">Non</string>
+    <string name="open_dialog">Ouvrir</string>
     <string name="no_authorize_dialog">Ne pas autoriser</string>
     <string name="import_menu_title">Importer une carte</string>
     <string name="import_folder_select_btn">Sélection du dossier d\'archives</string>
     <string name="extraction_lbl">Extraction</string>
     <string name="map_created_lbl">Création de la carte</string>
+    <string name="map_import_success">Carte importée avec succès</string>
     <string name="map_manage_btn_string">Modifier</string>
     <string name="map_save_string">Sauvegarder</string>
+    <string name="map_update_category">Réparation et mise à jour</string>
+    <string name="map_analyze_and_repair">Analyser &amp; réparer</string>
+    <string name="map_analyze_and_repair_progress">Réparation en cours</string>
+    <string name="map_repair_rationale">Cette fonctionnalité vous permet de réparer la carte en téléchargeant les tuiles manquantes. Ceci requiert TrekMe Extended, et n\'est possible que pour les cartes créées à partir de TrekMe v4 et supérieur.</string>
+    <string name="map_no_missing_tile">Carte complète</string>
+    <string name="map_missing_tiles">Tuiles manquantes : %1$s</string>
+    <string name="map_update">Mettre à jour</string>
+    <string name="map_update_progress">Mise à jour en cours</string>
+    <string name="map_repair_rationale_subscribed_user">Cette fonctionnalité vous permet de réparer la carte en téléchargeant les tuiles manquantes. C\'est utile après avoir téléchargé une carte avec une connexion instable, ou après avoir recu une carte avec la fonctionnalité de partage de carte.</string>
+    <string name="map_update_rationale">Cette fonctionnalité vous permet de re-télécharger la carte. C\'est utile quand la carte a été créée il y a plusieurs années et que son contenu est susceptible d\'avoir changé.</string>
+    <string name="map_update_action">Mettre à jour</string>
+    <string name="map_repair_action">Réparer</string>
+    <string name="map_created_on">Carte créée le %1$s</string>
+    <string name="map_updated_on">Dernière mise à jour le %1$s</string>
+
     <string name="map_delete_question">Confirmer la suppression de la carte</string>
     <string name="cancel_dialog_string">Annuler</string>
     <string name="manage_tracks_menu">Gérer les traces</string>
     <string name="follow_track_menu">Suivre une trace</string>
+    <string name="manage_markers_menu">Gérer les marqueurs</string>
     <string name="import_tracks_menu_title">Traces</string>
     <string name="import_tracks_warning">Le fichier sélectionné a un format inconnu. Les extensions connues sont :</string>
     <string name="mapview_add_marker">Marqueur</string>
@@ -42,12 +60,15 @@
     <string name="marker_edit_screen_title">Modification du marqueur</string>
     <string name="beacon_edit_screen_title">Modification de la balise</string>
     <string name="marker_name_label">Nom</string>
+    <string name="use_same_color_as_track">Même couleur que la trace</string>
     <string name="beacon_setting_title">Taille balise</string>
     <string name="beacon_radius_label">Rayon</string>
     <string name="beacon_unit_label">Unité</string>
     <string name="comment_label">Commentaire</string>
     <string name="save_action">Enregistrer</string>
     <string name="wgs84_label">Coordonnées WGS84</string>
+    <string name="color_label">Couleur</string>
+    <string name="change_color">Changer la couleur</string>
     <string name="projection_label">Coordonnées de projection</string>
     <string name="marker_changes_saved">Changements sauvegardés</string>
     <string name="beacon_help">Une balise sert à vous alerter quand vous rentrez dans la zone de proximité (indiquée en
@@ -67,7 +88,6 @@
     <string name="track_name_change">Entrez le nom de la trace</string>
     <string name="track_rename_action">Renommer</string>
     <string name="mapview_orientation_enable">Afficher l\'orientation</string>
-    <string name="imported_untouched">Carte importée sans modifications</string>
     <string name="extraction_error">Erreur d\'extraction</string>
     <string name="snack_msg_show_map_list">Afficher la liste des cartes ?</string>
     <string name="archive_dialog_title">Sauvegarde de carte</string>
@@ -76,6 +96,7 @@
         d\'importation.\n\nLa progression de l\'archivage apparaîtra dans une notification.</string>
     <string name="archive_notification_msg">Sauvegarde de la carte %s en cours</string>
     <string name="archive_snackbar_finished">Sauvegarde terminée</string>
+    <string name="archive_snackbar_error">Une erreur est survenue lors de l\'archivage de la carte</string>
     <string name="archive_notification_title">Archivage</string>
     <string name="download_map_dialog_title">Téléchargement</string>
     <string name="download_map_dialog_msg">Téléchargement de la carte %s…</string>
@@ -102,17 +123,28 @@
     <string name="wmts_level_max_decrement">Décrémenter le niveau max</string>
     <string name="wmts_level_max_increment">Incrémenter le niveau max</string>
     <string name="max_zoom">Zoom maximum</string>
+
+    <!-- DownloadService -->
     <string name="service_download_name">Service de téléchargement de carte</string>
     <string name="service_download_action">Téléchargement de carte</string>
-    <string name="download">Télécharger</string>
+    <string name="service_repair_action">Réparation de carte</string>
+    <string name="service_update_action">Mise à jour de carte</string>
+    <string name="service_download_finished">Téléchargement de la carte terminé</string>
+    <string name="service_repair_finished">Réparation de la carte terminée</string>
+    <string name="service_update_finished">Mise à jour de la carte terminée</string>
     <string name="service_download_stop">Arrêter</string>
+    <string name="service_download_bad_storage">TrekMe ne peut rien écrire sur votre stockage interne ou votre carte SD. C\'est probablement un problème de permission. Veuillez vérifier que TrekMe dispose de toutes ses autorisations, puis redémarrer votre téléphone est conseillé dans ce cas.</string>
+    <string name="service_download_already_running">Un téléchargement est déjà en cours. Veuillez attendre la fin du téléchargement avant d\'en lancer un autre.</string>
+    <string name="service_download_missing_api">Une erreur inattendue d\'api est survenur. Veuiillez mettre à jour TrekMe.</string>
+    <string name="service_download_repair_error">Cette carte n\'est pas réparable.</string>
+
+    <string name="download">Télécharger</string>
     <string name="map_download_dialog_title">Téléchargement en cours</string>
     <string name="map_download_dialog_progress">Progression</string>
     <string name="import_error">Une erreur est survenue. Essayez de redémarrer l\'application.</string>
     <string name="mapcreate_settings">Paramètres</string>
     <string name="image_preferences_category">Image de présentation</string>
     <string name="image_change_btn_txt">Changer l\'image</string>
-    <string name="service_download_finished">Téléchargement de la carte terminé</string>
     <string name="map_size">Taille de la carte</string>
     <string name="map_too_big">Carte volumineuse</string>
     <string name="map_too_big_explanation">Il est conseillé de ne télécharger que la zone dont vous avez besoin, ou d\'adapter les niveaux de zoom.</string>
@@ -124,6 +156,7 @@
     <string name="onboarding_center_on_pos">Centrez sur votre position avec ce boutton</string>
     <string name="onboarding_select_area">Sélectionnez la zone à télécharger</string>
     <string name="download_confirm">Téléchargement lancé. Voir le statut dans les notifications.</string>
+    <string name="repair_confirm">Réparation de carte lancé. Voir le statut dans les notifications.</string>
     <string name="confirm_exit">Appuyez à nouveau sur RETOUR pour quitter TrekMe</string>
     <string name="ign_spain_source">IGN Espagne</string>
     <string name="track_file_name_change">Nom du fichier</string>
@@ -131,6 +164,7 @@
     <string name="track_is_being_added">La trace est en cours d\'import dans la carte</string>
     <string name="track_is_being_restored">Une trace est en cours de récupération</string>
     <string name="no_track_message">Vous n\'avez pas encore importé de trace. Vous pouvez créer votre propre trace en enregistrant votre parcours. Ou bien vous pouvez télécharger des traces au format gpx sur un site internet de randonnée, et l\'importer avec le bouton ci-dessus.</string>
+    <string name="no_markers_message">Il n\'y a pas de marqueurs sur cette carte.</string>
     <string name="track_stats_menu_title">Statistiques enregistrement en cours</string>
     <string name="no_internet">Vous devez être connecté à internet pour créer une carte</string>
     <string name="distance">Distance</string>
@@ -138,14 +172,18 @@
     <string name="mapcreate_define_layer">Couches</string>
     <string name="ign_select_layer_title">Choix de la couche</string>
     <string name="import_result_recap">Résultat d\'import\n  Routes: %s \n  Marqueurs: %s</string>
+    <string name="import_result_out_of_bounds">Cette trace est hors des limites de la carte.</string>
     <string name="gpx_import_error_msg">Oups.. il y a eu problème pendant l\'import</string>
     <string name="about">À propos</string>
     <string name="help_url">https://github.com/p-lr/TrekMe/blob/master/Readme.fr.md#sommaire</string>
+    <string name="link_error">Le lien ne peut être ouvert :/</string>
     <string name="map_download_dialog_error">Une erreur est survenue durant l\'import de la carte, qui n\'apparaîtra probablement pas dans la liste des cartes, ou bien elle ne sera pas calibrée. Le plus simple est de télécharger à nouveau votre carte. Désolé :(</string>
     <string name="bad_storage_status">Votre carte SD présente un problème. TrekMe ne peut télécharger des cartes ou fonctionner normalement dans ces conditions.</string>
     <string name="storage_read_only">Votre carte SD est en lecture seule. TrekMe ne peut télécharger des cartes ou fonctionner normalement dans ces conditions.</string>
     <string name="warning_title">Attention</string>
-    <string name="service_download_bad_storage">TrekMe ne peut rien écrire sur votre stockage interne ou votre carte SD. C\'est probablement un problème de permission. Veuillez vérifier que TrekMe dispose de toutes ses autorisations, puis redémarrer votre téléphone est conseillé dans ce cas.</string>
+    <string name="error_title">Erreur</string>
+    <string name="init_error">TrekMe ne parvient pas à créer les répertoires nécessaires, et ne peut fonctionner normalement. Si l\'erreur persiste, veuillez résinstaller l\'app.</string>
+
     <string name="mapcreate_warning_ign">Il y a un souci avec les serveurs de l\'IGN. Les indisponibilités ne durent en général que quelques heures.</string>
     <string name="mapcreate_warning_others">Il y a un souci avec les serveurs du fournisseur de cette carte. Les indisponibilités ne durent en général que quelques heures.</string>
     <string name="mapcreate_btn_nav_credentials">Corriger mes identifiants</string>
@@ -182,6 +220,7 @@
     <string name="preference_rotate_none">Aucune rotation</string>
     <string name="preference_rotate_free">Rotation libre</string>
     <string name="no_storage_perm">TrekMe a besoin d\'avoir accès au stockage interne pour y stocker des cartes, notamment. Rassurez-vous, cette application ne tentera jamais d\'accéder à vos données personnelles.\n\nPour modifier les permissions de TrekMe, il faut aller dans vos réglages Android dans la section Applications > TrekMe.</string>
+    <string name="no_location_perm">Sans l\'accès à votre position, la plupart des fonctionnalités de TrekMe sont inopérantes. Veuillez accorder cette permission dans les paramètres de l\'application.</string>
     <string name="swiss_topo_source_description">Office fédéral de topographie</string>
     <string name="service_wifip2p_name">Service de partage de carte</string>
     <string name="service_wifip2p_action">Envoi et réception de carte</string>
@@ -190,12 +229,16 @@
     <string name="service_beacon_name">Service de balises</string>
     <string name="service_beacon_notification_name">Gestion des balises</string>
     <string name="service_beacon_stop">Arrêter</string>
+    <string name="requires_location_permission_beacon">La permission de position en arrière-plan est nécessaire pour utiliser les balises.</string>
 
     <!-- TrackFollowService -->
     <string name="service_track_follow_name">Service de suivi de trace</string>
     <string name="service_track_follow_notification_name">Suivi de trace</string>
     <string name="service_track_follow_stop">Arrêter</string>
+    <string name="requires_location_permission_track_follow">La permission de position en arrière-plan est nécessaire pour suivre une trace.</string>
 
+    <string name="wifip2p_explanation">Envoyer ou recevoir une carte avec un autre utilisateur de TrekMe, via la wifi.\nPour continuer, il faut activer :</string>
+    <string name="wifip2p_explanation2">• la Wifi\n• la Localisation</string>
     <string name="share_menu_title">Recevoir et envoyer</string>
     <string name="wifip2p_stop_btn">Stop</string>
     <string name="wifip2p_rcv_btn">Recevoir</string>
@@ -206,12 +249,12 @@
     <string name="wifip2p_loading">Chargement en cours</string>
     <string name="wifip2p_error">Une erreur est survenue (%1$s).\nUne nouvelle tentative peut réussir.</string>
     <string name="wifip2p_successful_load">La carte %1$s a été chargée avec success</string>
-    <string name="wifip2p_warning_wifi">Vous devez activer la Wifi pour profiter de cette fonctionnalité. La communican avec l\'autre appareil se fait directement en Wifi.</string>
+    <string name="wifip2p_warning_wifi">Vous devez activer la Wifi pour profiter de cette fonctionnalité. La communication avec l\'autre appareil se fait directement en Wifi.</string>
     <string name="wifip2p_help_url">https://github.com/peterLaurence/TrekMe/blob/master/Readme.fr.md#partage-de-carte</string>
     <string name="mapview_measure_distance_on_track">Distance sur trace</string>
     <string name="module_check_unknown">Imposible de vérifier le module</string>
     <string name="preference_zoom_when_centered">Zoom quand centré</string>
-    <string name="preference_change_scale_when_centering">Définir échelle quand centré</string>
+    <string name="preference_change_scale_when_centering">Définir zoom quand centré</string>
     <string name="import_title">Importer depuis des archives</string>
     <string name="import_desc">Importer des cartes préalablement sauvegardées depuis la liste des cartes > MODIFIER > Sauvegarder</string>
     <string name="ordnance_survey_source_description">Carte de Grande-Bretagne</string>
@@ -220,6 +263,7 @@
     <string name="map_image_import_ok">Image changée</string>
     <string name="map_image_import_error">Erreur lors du changement d\'image :(</string>
     <string name="map_settings_error">Désolé, une erreur est survenue</string>
+    <string name="map_settings_trekme_extended_title">TrekMe Extended requis</string>
     <string name="calibration_projection_error">Erreur lors du changement de projection :(</string>
     <string name="battery_warn_message_gpx_recording">L\'enregistrement GPX sera probablement interrompu, car l\'optimisation de la batterie est activée
         pour TrekMe.\nUn enregistrement GPX est lancé sous forme de service Android, qui tourne en tâche de fond.
@@ -249,18 +293,20 @@
     <string name="unknown_map_source">Source de carte inconnue. La configuration de cette carte est incorrecte.</string>
     <string name="service_gpx_error">Erreur à la création du fichier GPX :(</string>
     <string name="service_gpx_location_error">TrekMe n\'a pas accès à votre position :(</string>
-    <string name="imported_new_map">Une nouvelle carte a été créée</string>
     <string name="location_info_title">Information</string>
     <string name="background_location_rationale_gpx_recording">Pour réaliser un enregistrement GPX, TrekMe doit avoir accès à votre position en arrière plan même lorsque
         l\'application est fermée ou inutilisée. Pour cela, l\'autorisation de position doit être mise à «toujours autoriser» ou équivalent.\n\nCes informations de position sont stockées localement sur votre
         appareil et ne sont <b>en aucun cas communiquées à des tiers</b>.
     </string>
+    <string name="background_location_gpx_recording_failure">L\'enregistrement GPX ne peut fonctionner que si l\'autorisation de localistion est à "toujours autoriser". Veuillez accorder cette permission dans les paramètres de l\'application.</string>
     <string name="background_location_rationale_track_follow">Pour vérifier à intervalle régulier votre distance par rapport à la trace suivie, TrekMe doit avoir accès à votre position en arrière plan.\nPour
         cela, l\'autorisation de position doit être mise à «toujours autoriser» ou équivalent.\n\nVotre position ne sera <b>en aucun cas communiquées à des tiers</b>.
     </string>
+    <string name="background_location_track_follow_failure">Le suivi de trace ne peut fonctionner que si l\'autorisation de localistion est à "toujours autoriser". Veuillez accorder cette permission dans les paramètres de l\'application.</string>
     <string name="close_dialog">Fermer</string>
     <string name="understood_dialog">J\'ai compris</string>
     <string name="new_text">nouveau</string>
+    <string name="requires_location_permission_recording">La permission de position en arrière-plan est nécessaire pour lancer un enregistrement GPX.</string>
     <string name="privacy_policy_title">Politique de confidentialité</string>
     <string name="privacy_policy_desc">Nous respectons votre vie privée et ne communiquerons jamais
         votre position ou toute autre donnée personnelle à des tiers. Nous ne stockons pas ces informations
@@ -268,7 +314,6 @@
     <string name="privacy_policy_link">Consultez la %1$s.</string>
     <string name="privacy_policy">politique de confidentialité</string>
     <string name="solution_title">Solution</string>
-    <string name="service_download_already_running">Un téléchargement est déjà en cours. Veuillez attendre la fin du téléchargement avant d\'en lancer un autre.</string>
     <string name="module_check_pending">Vérification du module…</string>
     <string name="track_visibility_btn">Visibilité de la trace</string>
     <string name="track_color_btn">Coleur de la trace</string>
@@ -279,6 +324,18 @@
     <string name="color_variant_light">Claire</string>
     <string name="color_variant_dark">Foncée</string>
     <string name="track_remove_question">Confirmez la suppression de la trace</string>
+
+    <!-- Markers manage -->
+    <string name="markers_manage_title">Gestion des marqueurs</string>
+    <string name="markers_manage_no_name">sans nom</string>
+    <string name="markers_manage_edit">Modifier</string>
+    <string name="markers_manage_select">Sélectionner</string>
+    <string name="markers_manage_goto">Voir</string>
+    <string name="markers_manage_select_all">Tout sélectionner</string>
+    <string name="markers_manage_deselect_all">Tout déselectionner</string>
+    <string name="markers_manage_change_color">Changer la couleur</string>
+    <string name="markers_manage_delete">Supprimer</string>
+
     <string name="preference_measurement_system_title">Unités de mesure</string>
     <string name="metric_system">Système métrique</string>
     <string name="imperial_system">Système impérial (miles)</string>
@@ -300,18 +357,27 @@
     <string name="layer_osm_outdoors">Outdoors</string>
     <string name="place_search_hint">Chercher un lieu</string>
     <string name="trekme_extended_advert">Profitez d\'une bien meilleure qualité d\'image et de textes plus lisibles.</string>
+    <string name="tile_count_text">Téléchargement de %1$s tuiles</string>
+    <string name="map_size_limit_title">Vous y êtes presque…</string>
+    <string name="map_size_limit_rationale">Débloquez le téléchargement de cartes de grande taille (cad ayant plus de %1$d tuiles) avec TrekMe Extended.
+        \n\nBénéficiez également d\'autres avantages tels que OpenStreetMap HD, avec une bien meilleure qualité d\'image et des textes plus lisibles :
+    </string>
+    <string name="map_size_limit_rationale_2">La liste complète des avantages est sur la page de l\'offre.</string>
     <string name="place_outside_of_covered_area">Ce lieu est hors de la zone couverte par cette carte.</string>
     <string name="mapcreate_overlay_layers">Superposer des couches</string>
     <string name="mapcreate_from_track">Utiliser une trace</string>
+    <string name="mapcreate_from_track_rationale">Utilisez une trace gpx pour centrer directement sur la bonne zone.</string>
     <string name="add_layer">Ajouter une couche</string>
     <string name="layer_ign_roads">Routes</string>
     <string name="layer_ign_slopes">Pentes en montagne</string>
+    <string name="overlay_screen_title">Couches de superposition</string>
     <string name="overlay_title">Couche</string>
     <string name="overlay_opacity">Opacité</string>
     <string name="overlay_empty">Aucune couche ajoutée.\nUtilisez le bouton ci-dessous pour ajouter une nouvelle couche.</string>
     <string name="layer_ign_cadastre">Paracelles cadastrales</string>
     <string name="layer_ign_plan_v2">Plan IGN v2</string>
     <string name="elevation_short">Alt</string>
+    <string name="distance_short">Dst</string>
     <string name="update_short">Δt\ </string>
     <string name="mapview_gpsdata_enable">Afficher données GPS</string>
     <string name="preference_max_scale">Échelle maximale</string>
@@ -328,6 +394,9 @@
     <string name="mapreate_warning_vps">Nous ne parvenons pas à récupérer certaines données. Si votre connexion internet fonctionne normalement, l\'infrastructure de TrekMe est peut-être impactée.</string>
     <string name="location_disabled_warning">La localisation doit être activée sur votre appareil pour lancer un enregistrement.</string>
     <string name="preference_zoom_when_centered_compl">(actuel : %1$s)</string>
+    <string name="tracks_settings_category">Traces</string>
+    <string name="track_export_format">Format d\'export des traces</string>
+    <string name="geojson_disclaimer">pour d\'autres apps que TrekMe</string>
     <string name="map_size_string">Taille</string>
     <string name="map_size_compute_string">Calcul de la taille</string>
     <string name="map_size_computing">Calcul en cours..</string>
@@ -366,6 +435,8 @@
     <string name="download_pending_item">Téléchargement en cours</string>
     <string name="choose_map_thumbnail">Vous pouvez choisir une image pour illustrer votre carte.\nContinuer ?</string>
     <string name="show_map_action">Ouvrir</string>
+    <string name="download_aborted_warning">Téléchargement interrompu</string>
+    <string name="download_aborted_explanation">Le téléchargement de cette carte a été interrompu. Cette carte est donc incomplète.\nVeuillez lancer \"%1$s\" pour cette carte.</string>
     <string name="validate_area">Valider</string>
     <string name="search_hint">Recherche…</string>
     <string name="mapcreate_out_of_bounds">Vous êtes hors des limites supportées pour cette carte</string>
@@ -381,11 +452,13 @@
     <string name="elevation_fix_help">La correction est ajoutée à l\'altitude fournie par le GPS</string>
     <string name="beacon_background_loc_perm">Cette carte contient des balises, ce qui nécessite de collecter les données de localisation
         même lorsque l\'application est fermée ou inutilisée.\n\nCette autorisation <b>n\'est pour le moment pas accordée</b>.</string>
+    <string name="beacon_background_loc_perm_failure">Les balises sont inactives car la permission de localisation n\'est pas "toujours autoriser". Veuillez accorder cette permission et relancer l\'application.</string>
     <string name="select_track_to_follow">Appuyez sur la trace à suivre</string>
     <string name="track_follow_already_running">Le suivi de trace est déjà en cours d\'exécution. Voulez-vous l\'arrêter ?</string>
     <string name="track_follow_help">Vous choisissez une trace à suivre, et si vous vous éloignez de plus de 50m de la trace, vous êtes alerté par un son et une vibration.\n\nLe
         seuil d\'alerte est de 50m par défaut, et peut être changé dans les réglages.
     </string>
+    <string name="manage_markers_help">Recherchez des marqueurs, sélectionnez-en plusieurs à la fois pour changer leur couleur ou les supprimer, etc.</string>
     <string name="itinerary_error">Désolé, aucune app de navigation trouvée</string>
     <string name="map_delete_landmark">Supprimer le marqueur</string>
     <string name="map_move_landmark">Déplacer le marqueur</string>
@@ -404,6 +477,8 @@
     <string name="trekme_extended_ign_overlay_desc">Superposez des couches : pentes pour activité neige, parcelles cadastrales, réseau des routes, chemins et sentiers.</string>
     <string name="trekme_extended_advanced_ft">Fonctionnalités avancées</string>
     <string name="track_follow_shop">Soyez alerté quand vous vous éloignez de plus de 50m d\'une trace (distance modifiable).</string>
+    <string name="trekme_extended_update_maps">Réparez vos cartes en téléchargeant les tuiles manquantes ou re-téléchargez les complètement pour mise à jour.
+        Ceci n\'est possible qu\'avec les cartes créées à partir de la v4 de TrekMe.</string>
     <string name="add_beacons">Ajoutez des balises pour vous alerter quand vous vous rapprochez de lieux précis sur la carte.</string>
     <string name="no_ads">Pas de publicité</string>
     <string name="new_features">Des fonctionnalités exclusives seront ajoutées</string>
@@ -420,17 +495,17 @@
     <string name="offer_gateway_check_pending">Vérifications en cours…</string>
     <string name="offer_gateway_subscription_must_end">Votre abonnement TrekMe Extended doit prendre fin avant de pouvoir choisir l\'option IGN.
         Vous pouvez gérer votre abonnement depuis la gestion de vos abonnements dans l\'application Google Play.</string>
-    <string name="ign_caution">Le serveur de carte de l\'IGN a parfois des lenteurs. Concrètement, vous voulez créer une carte IGN mais …
-    rien ne s\'affiche. Dans ce cas, il est conseillé de réessayer plus tard dans la journée.</string>
+    <string name="ign_caution">Le serveur de carte de l\'IGN a parfois des lenteurs. Si vous avez des difficultés pour créer une carte, il est conseillé de réessayer plus tard dans la journée.</string>
     <string name="nb">N.B</string>
     <string name="go_to_track_on_map">Voir sur la carte</string>
     <string name="tracks_manage_frgmt_title">Gestion des traces</string>
     <string name="settings_frgmt_title">Réglages</string>
-    <string name="map_settings_show_advanced">Afficher options avancées</string>
+    <string name="settings_show_advanced">Afficher options avancées</string>
     <string name="map_settings_hide_advanced">Cacher options avancées</string>
     <string name="map_settings_frgmt_title">Réglages de carte</string>
     <string name="center_on_track">Centrez directement sur une trace depuis la gestion des traces d\'une carte.</string>
     <string name="define_elevation_fix">Définissez une correction d\'altitude GPS.</string>
+    <string name="no_download_limit">Pas de limite de téléchargement.</string>
     <string name="osm_level_17">Débloquez le niveau 17 pour les cartes OpenStreetMap.</string>
     <string name="create_map_from_track">Créez une carte à partir d\'une trace gpx.</string>
     <string name="rate_the_app">Noter l\'application</string>

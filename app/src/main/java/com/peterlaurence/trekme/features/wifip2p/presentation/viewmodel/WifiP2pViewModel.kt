@@ -1,21 +1,25 @@
 package com.peterlaurence.trekme.features.wifip2p.presentation.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.core.TrekMeContext
 import com.peterlaurence.trekme.features.wifip2p.app.service.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
 
 /**
  * The view-model for the WifiP2P feature (map sharing).
  *
- * @author P.Laurence on 07/04/20
+ * @since 2020/04/07
  */
 @HiltViewModel
 class WifiP2pViewModel @Inject constructor(
@@ -32,6 +36,7 @@ class WifiP2pViewModel @Inject constructor(
      * Current user requests to receive a map (from another user)
      */
     fun onRequestReceive() {
+        if (!checkWifiState()) return
         val state = state.value
         if (state is Stopped) {
             val importedPath = trekMeContext.importedDir?.absolutePath ?: return
@@ -49,6 +54,7 @@ class WifiP2pViewModel @Inject constructor(
      * Current user requests to send a map (to another user)
      */
     fun onRequestSend(mapId: UUID) {
+        if (!checkWifiState()) return
         val state = state.value
         if (state is Stopped) {
             startService(
@@ -72,7 +78,21 @@ class WifiP2pViewModel @Inject constructor(
         }
         app.startService(intent)
     }
+
+    private fun checkWifiState(): Boolean {
+        val wifiManager = app.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        if (wifiManager != null) {
+            if (!wifiManager.isWifiEnabled) {
+                viewModelScope.launch {
+                    _errors.send(WifiNotEnabled)
+                }
+                return false
+            }
+        }
+        return true
+    }
 }
 
-sealed class Errors
-object ServiceAlreadyStarted : Errors()
+sealed interface Errors
+data object ServiceAlreadyStarted : Errors
+data object WifiNotEnabled : Errors

@@ -1,7 +1,13 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.peterlaurence.trekme.features.shop.presentation.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -21,14 +27,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
-import com.peterlaurence.trekme.features.common.presentation.ui.pager.HorizontalPager
-import com.peterlaurence.trekme.features.common.presentation.ui.pager.PagerState
-import com.peterlaurence.trekme.features.common.presentation.ui.pager.rememberPagerState
 import com.peterlaurence.trekme.features.common.presentation.ui.scrollbar.drawVerticalScrollbar
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme
 import com.peterlaurence.trekme.features.shop.presentation.ui.offers.*
@@ -39,9 +42,9 @@ import java.util.*
 
 @Composable
 fun ShopStateful(
-    extendedWithIgnViewModel: ExtendedWithIgnViewModel = viewModel(),
-    extendedOfferViewModel: ExtendedOfferViewModel = viewModel(),
-    gpsProPurchaseViewModel: GpsProPurchaseViewModel = viewModel(),
+    extendedWithIgnViewModel: ExtendedWithIgnViewModel = hiltViewModel(),
+    extendedOfferViewModel: ExtendedOfferViewModel = hiltViewModel(),
+    gpsProPurchaseViewModel: GpsProPurchaseViewModel = hiltViewModel(),
     onMainMenuClick: () -> Unit
 ) {
     val extendedOfferWithIgnPurchaseState by extendedWithIgnViewModel.purchaseFlow.collectAsState()
@@ -121,10 +124,12 @@ fun ShopStateful(
     )
 }
 
-private sealed interface UiState
-private data class Purchased(val isIgn: Boolean) : UiState
+private sealed interface UiState {
+    val isIgn: Boolean
+}
+private data class Purchased(override val isIgn: Boolean) : UiState
 private data class Selection(
-    val isIgn: Boolean,
+    override val isIgn: Boolean,
     val purchaseState: PurchaseState,
     val monthlySubDetails: SubscriptionDetails?,
     val yearlySubDetails: SubscriptionDetails?
@@ -156,7 +161,7 @@ private fun ShopUi(
     ) { paddingValues ->
         ShopCarousel(
             modifier = Modifier.padding(paddingValues),
-            pagerState = rememberPagerState(),
+            pagerState = rememberPagerState { 2 },
             firstOffer = OfferUi(
                 header = {
                     when (uiState) {
@@ -169,10 +174,8 @@ private fun ShopUi(
                     }
                 },
                 content = {
-                    when (uiState) {
-                        is Purchased -> TrekMeExtendedPurchasedContent(withIgn = uiState.isIgn)
-                        is Selection -> TrekMeExtendedContent(uiState.isIgn, onIgnSelectionChanged)
-                    }
+                    val purchased = uiState is Purchased
+                    TrekMeExtendedContent(uiState.isIgn, purchased, onIgnSelectionChanged)
                 },
                 footerButtons = {
                     when (uiState) {
@@ -231,7 +234,7 @@ private fun ShopCarousel(
                 }
             }
         }
-        HorizontalPager(count = 2, state = pagerState) { page ->
+        HorizontalPager(state = pagerState) { page ->
             /* The layout to overlay bottom buttons */
             Box(
                 contentAlignment = Alignment.BottomCenter

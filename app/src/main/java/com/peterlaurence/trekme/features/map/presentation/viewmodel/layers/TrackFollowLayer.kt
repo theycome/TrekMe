@@ -3,8 +3,6 @@ package com.peterlaurence.trekme.features.map.presentation.viewmodel.layers
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.lifecycle.lifecycleScope
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.geotools.distanceApprox
 import com.peterlaurence.trekme.core.map.domain.models.Map
@@ -26,6 +24,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -43,6 +42,7 @@ import ovh.plrapps.mapcompose.ui.state.MapState
 
 class TrackFollowLayer(
     private val scope: CoroutineScope,
+    private val processScope: CoroutineScope,
     private val dataStateFlow: Flow<DataState>,
     private val trackFollowRepository: TrackFollowRepository,
     private val mapFeatureEvents: MapFeatureEvents,
@@ -91,14 +91,26 @@ class TrackFollowLayer(
     /**
      * 3 steps:
      * 1. Check that location is enabled and that battery optimization is disabled
-     * 2. Make paths clickable and start the service upon path selection
-     * 3. Check for background location permission
+     * 2. Check for background location permission. If the permission isn't granted, stop there and
+     *    warn the user.
+     * 3. Make paths clickable and start the service upon path selection
      */
     fun start() = scope.launch {
         /* Step 1 */
         checkLocationAndBatteryOpt()
 
         /* Step 2 */
+        if (!checkBackgroundLocationPerm()) {
+            appEventBus.postMessage(
+                WarningMessage(
+                    title = appContext.getString(R.string.warning_title),
+                    msg = appContext.getString(R.string.background_location_track_follow_failure)
+                )
+            )
+            return@launch
+        }
+
+        /* Step 3 */
         val (map, mapState) = dataStateFlow.firstOrNull() ?: return@launch
         _events.send(Event.SelectTrackToFollow)
 
@@ -121,9 +133,6 @@ class TrackFollowLayer(
                 updatePath(p.id, clickable = true)
             }
         }
-
-        /* Step 3 */
-        checkBackgroundLocationPerm()
     }
 
     private suspend fun checkLocationAndBatteryOpt() {
@@ -145,12 +154,16 @@ class TrackFollowLayer(
         }
     }
 
-    private suspend fun checkBackgroundLocationPerm() {
-        if (!isBackgroundLocationGranted(appContext)) {
-            _events.send(Event.BackgroundLocationNotGranted)
-        } else {
-            appEventBus.requestBackgroundLocation()
-        }
+    private suspend fun checkBackgroundLocationPerm(): Boolean {
+        return if (!isBackgroundLocationGranted(appContext)) {
+            val request = AppEventBus.BackgroundLocationRequest(
+                R.string.background_location_rationale_track_follow
+            )
+
+            appEventBus.requestBackgroundLocation(request)
+
+            request.result.receiveAsFlow().first()
+        } else true
     }
 
     private fun startTrackFollowService(pathData: PathData, map: Map, trackId: String) = scope.launch {
@@ -163,7 +176,7 @@ class TrackFollowLayer(
             var pixelPerMeterThreshold: Double? = null
 
             init {
-                ProcessLifecycleOwner.get().lifecycleScope.launch {
+                processScope.launch {
                     val latLonLeft = getLonLatFromNormalizedCoordinate(0.0, 0.5, map.projection, map.mapBounds)
                     val latLonRight = getLonLatFromNormalizedCoordinate(1.0, 0.5, map.projection, map.mapBounds)
                     val mapWidthInMeters = withContext(Dispatchers.Default) {
@@ -214,7 +227,6 @@ class TrackFollowLayer(
 
     sealed interface Event {
         object DisableBatteryOptSignal : Event
-        object BackgroundLocationNotGranted : Event
         object SelectTrackToFollow : Event
     }
 }

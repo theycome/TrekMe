@@ -54,7 +54,7 @@ private fun MapSourceListUi(
         ) {
             items(sources) { wmtsSource ->
                 SourceRow(wmtsSource, onSourceClick)
-                Divider(thickness = 0.5.dp)
+                HorizontalDivider(thickness = 0.5.dp)
             }
         }
     }
@@ -133,7 +133,7 @@ private fun SourceRow(source: WmtsSource, onSourceClick: (WmtsSource) -> Unit) {
 }
 
 @Composable
-private fun getTitleForSource(source: WmtsSource): String {
+fun getTitleForSource(source: WmtsSource): String {
     return when (source) {
         WmtsSource.IGN -> stringResource(R.string.ign_source)
         WmtsSource.SWISS_TOPO -> stringResource(R.string.swiss_topo_source)
@@ -171,13 +171,14 @@ private fun getImageForSource(source: WmtsSource): Painter {
 @Composable
 fun MapSourceListStateful(
     viewModel: MapSourceListViewModel,
-    onSourceClick: (WmtsSource) -> Unit
+    onSourceClick: (WmtsSource) -> Unit,
+    onMainMenuClick: () -> Unit
 ) {
     val sourceList by viewModel.sourceList
     var showOnBoarding by viewModel.showOnBoarding
 
     BoxWithConstraints {
-        MapSourceListUi(sourceList, onSourceClick, onMainMenuClick = viewModel::onMainMenuClick)
+        MapSourceListUi(sourceList, onSourceClick, onMainMenuClick = onMainMenuClick)
         if (showOnBoarding) {
             OnBoardingTip(
                 modifier = Modifier

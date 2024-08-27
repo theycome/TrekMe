@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
@@ -33,7 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +44,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -335,9 +334,9 @@ fun TrailMapStateful(
         }
 
         MapSourceDataSelect(
+            /* As of 2024/08/18, remove OpenTopoMap as levels 16 and 17 are no longer available */
             mapSourceDataList = listOf(
                 OsmSourceData(WorldStreetMap),
-                OsmSourceData(OpenTopoMap),
                 IgnSourceData(IgnClassic, overlays = emptyList()),
                 UsgsData,
                 OrdnanceSurveyData,
@@ -395,8 +394,9 @@ private fun ExcursionMapScreen(
             ) {
                 Row(
                     modifier = Modifier
-                        .height(58.dp)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .safeDrawingPadding()
+                        .height(58.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -411,8 +411,8 @@ private fun ExcursionMapScreen(
         }
     ) { paddingValues ->
         val modifier = Modifier
-            .fillMaxSize()
             .padding(paddingValues)
+            .fillMaxSize()
         when (uiState) {
             Error.PROVIDER_OUTAGE -> {
                 ErrorScreen(message = stringResource(id = R.string.provider_issue))
@@ -705,23 +705,6 @@ private fun LazyListScope.downloadSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExcursionMapTopAppBar(
-    onBack: () -> Unit,
-) {
-    TopAppBar(
-        title = { Text(stringResource(id = R.string.excursions)) }, // TODO: show "On foot", "Bike", etc
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painterResource(id = R.drawable.baseline_arrow_back_24), null,
-                )
-            }
-        }
-    )
-}
-
 @Composable
 private fun ExcursionMap(
     modifier: Modifier = Modifier,
@@ -748,7 +731,7 @@ private fun ExcursionMap(
                 Modifier.padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Search")
+                Text(stringResource(id = R.string.excursion_search_button))
             }
         }
         if (isSearchPending) {

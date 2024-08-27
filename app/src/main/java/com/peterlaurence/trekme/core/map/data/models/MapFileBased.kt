@@ -13,7 +13,7 @@ import java.util.*
  * **Warning**: This class isn't thread-safe. It's advised to thread-confine the use of this class.
  */
 class MapFileBased(
-    private val config: MapConfig,
+    val config: MapConfig,
     val folder: File
 ) : Map {
     /**
@@ -22,12 +22,9 @@ class MapFileBased(
      */
     override val id: UUID = config.uuid
 
-    override val name: String = config.name
+    override val name: MutableStateFlow<String> = MutableStateFlow(config.name)
 
-    override val thumbnailImage: Bitmap?
-        get() = config.thumbnailImage
-
-    override val thumbnailSize = 256
+    override val thumbnail: MutableStateFlow<Bitmap?> = MutableStateFlow(config.thumbnailImage)
 
     /**
      * Get the bounds the map. See [MapBounds]. By default, the size of the map is used for the
@@ -43,6 +40,11 @@ class MapFileBased(
     override val excursionRefs = MutableStateFlow<List<ExcursionRef>>(emptyList())
     override val elevationFix = MutableStateFlow(config.elevationFix)
     override val sizeInBytes: MutableStateFlow<Long?> = MutableStateFlow(null)
+    override val creationData: CreationData? = config.creationData
+    override val missingTilesCount: MutableStateFlow<Long?> = MutableStateFlow(null)
+    override val lastRepairDate: MutableStateFlow<Long?> = MutableStateFlow(null)
+    override val lastUpdateDate: MutableStateFlow<Long?> = MutableStateFlow(null)
+    override val isDownloadPending: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     /**
      * The calibration status is either :
@@ -81,12 +83,14 @@ class MapFileBased(
                     calibrationPoints[1]
                 )
             } else null
+
             CalibrationMethod.CALIBRATION_3_POINTS -> if (calibrationPoints.size >= 3) {
                 CalibrationMethods.calibrate3Points(
                     calibrationPoints[0],
                     calibrationPoints[1], calibrationPoints[2]
                 )
             } else null
+
             CalibrationMethod.CALIBRATION_4_POINTS -> if (calibrationPoints.size == 4) {
                 CalibrationMethods.calibrate4Points(
                     calibrationPoints[0],
@@ -149,17 +153,6 @@ class MapFileBased(
     override val heightPx: Int
         get() = config.size.height
 
-    override val configSnapshot: MapConfig
-        get() = config.copy()
-
-    override fun copy(config: MapConfig): Map {
-        return MapFileBased(config = config, folder = folder)
-    }
-
-    fun copyAndMove(config: MapConfig, folder: File): Map {
-        return MapFileBased(config = config, folder = folder)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -167,9 +160,7 @@ class MapFileBased(
         other as MapFileBased
 
         /* By design, only MapConfig participates in equals policy */
-        if (config != other.config) return false
-
-        return true
+        return config == other.config
     }
 
     override fun hashCode(): Int {

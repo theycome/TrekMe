@@ -26,6 +26,7 @@
   * [S'enregistrer au format GPX](#enregistrement-gpx)
   * [Suivre une trace](#suivre-une-trace)
   * [Gérer les traces](#gérer-les-traces)
+  * [Gérer les marqueurs](#gérer-les-marqueurs)
 5. [Paramètres](#paramètres)
   * [Démarrer sur la dernière carte](#démarrer-sur-la-dernière-carte)
   * [Dossier de téléchargement](#dossier-de-téléchargement)
@@ -79,10 +80,12 @@ Ici, on utilise une source de carte spécifique. Google map est un exemple de so
 
 Les cartes IGN sont parfaites pour cela. Elles couvrent la France entière ainsi que les DOM-TOM 
 (Guadeloupe, Martinique, Réunion, Tahiti, etc.). Pour les Etats-Unis, il y a l'USGS.
-Il est important de noter que tous les pays n'ont pas un service national équivalent de l'IGN. Donc 
-parfois, il faut se contenter des cartes OpenStreetMap.
+Il est important de noter que tous les pays n'ont pas un service national équivalent de l'IGN. 
+Pour le reste, les cartes OpenStreetMap ont une couverture mondiale; et la version OpenStreetMap HD 
+offre un bien meilleur niveau de qualité.
 
-Certains fournisseurs de carte nécessitent une souscription, pour l'instant seulement l'IGN.
+Certains fournisseurs de carte nécessitent une souscription, pour l'instant seulement l'IGN et 
+OpenStreetMap HD. Pour les autres, le téléchargement est gratuit en deçà d'un certain seuil.
 
 Depuis le menu principal, choisissez "Créer une carte". Un menu vous donne alors le choix entre les 
 sources suivantes : 
@@ -126,7 +129,8 @@ A l'exception de l'IGN France, qui nécessite un abonnement annuel, le menu suiv
 
 Les fournisseurs de carte proposent différents niveaux de zoom, allant de 1 (niveau globe) à 18 
 (carte très détaillée).
-Dans la plupart des cas, vous ne voulez pas des niveaux 1 à 10, et le niveau 18 n'est pas nécessaire. 
+Dans la plupart des cas, vous ne voulez pas des niveaux 1 à 10, et le niveau 17 est rarement
+nécessaire. 
 C'est la raison pour laquelle le réglage par défaut est de 12 pour le zoom minimum, et 16 pour le maximum.
 Ces réglages par défaut conviennent pour la plupart des usages, et il est conseillé de ne pas les
 changer sauf si vous savez ce que vous faites.
@@ -134,33 +138,40 @@ changer sauf si vous savez ce que vous faites.
 La quantité d'images qui devront être téléchargées dépend directement du choix des niveaux de zoom 
 min et max. Plus le niveau de zoom min est petit et plus le niveau max est grand, plus la quantité à
  télécharger est importante.
-Ceci est indiqué par les nombre de transactions. Mais aussi plus simplement l'estimation de la taille
- de la carte en Mo est indiquée.
+Ceci est indiqué par l'estimation de la taille de la carte en Mo.
 Il est important de noter que télécharger plusieurs centaines de Mo peut prendre des heures... Il est
  donc fortement recommandé de ne sélectionner que la zone dont vous avez besoin.
 
-Quand tout est ok, utilisez le bouton "Telecharger". Un service est alors lancé, et une notification 
+Quand tout est ok, utilisez le bouton "Télécharger". Un service est alors lancé, et une notification 
 vous en informe. Depuis le gestionnaire de notifications de votre téléphone, vous pouvez :
 
 * Voir la progressoin du téléchargement
 * Annuler le téléchargement
 
 Quand le service a fini le téléchargement, vous recevez une notification et une nouvelle carte est 
-disponible dans la liste des cartes. Cette carte est déjà calibrée et prête à l'emploi.
+disponible dans la liste des cartes.
 Vous pouvez la personnaliser en lui associant une image de présentation qui apparaîtra à côté de son
  nom dans la liste des cartes. Pour ce faire, utilisez le bouton d'édition en dessous du nom de la 
  carte, sur la gauche.
 Vous accédez alors à la configuration de la carte, où vous pouvez :
 
 * Changer l'image de présentation
-* Changer la projection de la carte (seulement si vous savez ce que vous faites)
-* Changer les points de calibration (seulement si vous savez ce que vous faites)
 * Changer le nom de la carte
 * Sauvegarder la carte
 
-Attention, il ne faut pas changer la projection ni les points de calibration d'une carte que vous 
-avez téléchargé. Il s'agit d'options pour les utilisateurs avertis. Une erreur à ce niveau 
-introduirait un biais dans votre positionnement sur la carte.
+#### Reprendre un téléchargement interrompu
+
+Lorsqu'un téléchargement de carte est interrompu (soit manuellement, ou par extinction de l'appareil
+par ex), la carte est incomplète. Ceci est indiqué sur la carte :
+
+<p align="center">
+<img src="doc/images/download-abort-fr.jpg" width="300">
+</p>
+
+Il est alors possible, si vous avec TrekMe Extended, de poursuivre le téléchargement en allant dans
+"MODIFIER" puis "Analyser & réparer". Les parties manquantes de la carte vont être téléchargées.
+Si vous n'avez pas l'offre premium de TrekMe, la réparation de carte n'est pas disponible. Il vous
+est alors conseillé de supprimer la carte incomplète.
 
 ### Depuis une archive
 
@@ -315,6 +326,11 @@ Même si vous quittez TrekMe, vous retrouverez la trace en temps réel sur votre
 
 ### Import d'un fichier GPX
 
+Il existe deux manières d'importer un fichier gpx : soit on importe la trace dans une carte (méthode 1),
+soit on importe dans toutes les cartes qui peuvent contenir la trace (méthode 2).
+
+#### Méthode 1 : import gpx dans une carte
+
 Alors que vous visionnez une carte, utilisez le menu en haut à droite, puis sélectionnez "Gérer les traces":
 
 <p align="center">
@@ -330,15 +346,30 @@ La liste des traces disponibles pour votre carte s'affiche alors (à ce stade il
 Vous pouvez alors :
 
 * Importer un fichier gpx avec le bouton d'import en bas à droite
-* Assigner un couleur pour chaque trace
+* Assigner une couleur pour chaque trace
 * Gérer la visibilité des traces déjà importées. Un appui long sur ce bouton change la visibilité de
 toutes les traces.
 * Supprimer des traces en les faisant glisser à droite ou à gauche (cela n'affecte en rien le fichier gpx)
 
-Avec le menu en haut à droite, qui appraît quand vous sélectionnez une trace, vous pouvez :
+Avec le menu en haut à droite, qui apparaît quand vous sélectionnez une trace, vous pouvez :
 
 * Renommer la trace sélectionnée
 * Aller directement sur la trace sélectionnée sur la carte (cette fonctionnalité n'est disponible qu'avec l'offre TrekMe Extended).
+
+#### Méthode 2 : import gpx dans toutes les cartes
+
+Depuis le menu principal > Mes traces, utilisez le menu ci-dessous puis "Importer des fichiers":
+
+<p align="center">
+<img src="doc/images/gpx-import-menu_fr.png" width="300">
+</p>
+
+Sélectionnez alors le ou les fichiers gpx à importer. La trace sera alors importée dans toutes les
+cartes qui peuvent l'afficher.
+
+Noter que les traces importées de cette manière sont communes à toutes les cartes. Par exemple, la
+suppression de la trace depuis cet écran a pour conséquence la suppression de la trace pour toutes
+les cartes.
 
 ### Enregistrement GPX
 
@@ -354,10 +385,10 @@ Un enregistrement GPX peut être lancé depuis n'importe quelle carte, à l'aide
 Un enregistrement peut être démarré, arrêté ou mis en pause.
 Quand un enregistrement est en cours, un service spécifique est démarré et fonctionne même si TrekMe 
 est arrêté.
-Si vous avez Android 10 ou plus, vous devez vous assurer :
+Si vous avez Android 10 ou plus, vous devez vous assurer que :
 
-- que TrekMe a l'autorisation de localisation en mode "Toujours autoriser", et pas seulement si l'application est en cours d'utilisation. 
-- que l'optimisation de la batterie est désactivée pour TrekMe.
+- TrekMe a l'autorisation de localisation en mode "Toujours autoriser", et pas seulement si l'application est en cours d'utilisation. 
+- l'optimisation de la batterie est désactivée pour TrekMe.
 
 Sinon, l'enregistrement n'enregistrera parfois pas de points et des lignes droites apparaîtront.
 
@@ -389,7 +420,7 @@ si toutes les conditions suivantes sont remplies :
 
 ### Gérer les traces
 
-La liste des enregistrements effectués est accessible depuis le menu > "Mes traces".
+La liste des enregistrements effectués est accessible depuis le menu > "Gérer les traces".
 En sélectionnant un enregistrement, quatre boutons en bas à gauche vous permettent respectivement de :
 
 * Renommer le fichier gpx
@@ -430,6 +461,23 @@ les altitudes min, max, et le dénivelé (non-cumulé).
 <p align="center">
 <img src="doc/images/ele-profile-fr.jpg" width="300">
 </p>
+
+### Gérer les marqueurs
+
+La liste des marqueurs est accessible depuis le menu > "Gérer les marqueurs". Depuis cet écran, 
+vous pouvez chercher un marqueur à partir de son nom.
+
+<p align="center">
+<img src="doc/images/manage-markers-fr.jpg" width="300">
+</p>
+
+Pour chaque marqueur, plusieurs actions sont possibles depuis le menu sur la droite, comme le fait 
+de centrer la carte sur le marqueur.
+
+<p align="center">
+<img src="doc/images/manage-markers-edit-fr.jpg" width="300">
+</p>
+
 
 ## Paramètres
 

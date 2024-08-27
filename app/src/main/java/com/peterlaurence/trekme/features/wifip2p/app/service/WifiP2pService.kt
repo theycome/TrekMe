@@ -270,6 +270,17 @@ class WifiP2pService : Service() {
         return START_NOT_STICKY
     }
 
+    /**
+     * As per api 35 specification, stop the service on timeout.
+     */
+    override fun onTimeout(startId: Int) {
+        super.onTimeout(startId)
+
+        scope.launch {
+            exitWithReason(Timeout, resetConnection = false)
+        }
+    }
+
     private suspend fun initialize() {
         channel = manager?.initialize(this.applicationContext, mainLooper) {
             Log.e(TAG, "Lost wifip2p connection")
@@ -520,8 +531,7 @@ class WifiP2pService : Service() {
                     when (result.status) {
                         MapParseStatus.NEW_MAP,
                         MapParseStatus.EXISTING_MAP -> exitWithReason(
-                            MapSuccessfullyLoaded(result.map?.name
-                                ?: ""), true)
+                            MapSuccessfullyLoaded(result.map?.name?.value ?: ""), true)
                         else -> exitWithReason(WithError(WifiP2pServiceErrors.MAP_IMPORT_ERROR), true)
                     }
                 }
@@ -537,7 +547,7 @@ class WifiP2pService : Service() {
 
     private fun send(map: Map, outputStream: DataOutputStream) {
         /* The name of the map is expected to be the first data */
-        outputStream.writeUTF(map.name)
+        outputStream.writeUTF(map.name.value)
 
         /* The uncompressed size is expected to come second */
         val directory = (map as? MapFileBased)?.folder ?: return
@@ -559,7 +569,7 @@ class WifiP2pService : Service() {
                 scope.launch {
                     /* The sender doesn't reset the WifiP2P connection on normal conditions (the
                      * receiver does) */
-                    exitWithReason(MapSuccessfullyLoaded(map.name), false)
+                    exitWithReason(MapSuccessfullyLoaded(map.name.value), false)
                 }
             }
 
@@ -600,7 +610,7 @@ class WifiP2pService : Service() {
  * Either in receiving or sending mode.
  */
 sealed class StartAction
-object StartRcv : StartAction()
+data object StartRcv : StartAction()
 data class StartSend(val map: Map) : StartAction()
 
 object StopAction
@@ -613,23 +623,23 @@ sealed class WifiP2pState : Comparable<WifiP2pState> {
     }
 }
 
-object Started : WifiP2pState() {
+data object Started : WifiP2pState() {
     override val index: Int = 0
 }
 
-object AwaitingP2pConnection : WifiP2pState() {
+data object AwaitingP2pConnection : WifiP2pState() {
     override val index: Int = 1
 }
 
-object P2pConnected : WifiP2pState() {
+data object P2pConnected : WifiP2pState() {
     override val index: Int = 2
 }
 
-object AwaitingSocketConnection : WifiP2pState() {
+data object AwaitingSocketConnection : WifiP2pState() {
     override val index: Int = 3
 }
 
-object SocketConnected : WifiP2pState() {
+data object SocketConnected : WifiP2pState() {
     override val index: Int = 4
 }
 
@@ -637,7 +647,7 @@ data class Loading(val progress: Int) : WifiP2pState() {
     override val index: Int = 5
 }
 
-object Stopping : WifiP2pState() {
+data object Stopping : WifiP2pState() {
     override val index: Int = 9
 }
 
@@ -646,7 +656,8 @@ data class Stopped(val stopReason: StopReason? = null) : WifiP2pState() {
 }
 
 sealed class StopReason
-object ByUser : StopReason()
+data object ByUser : StopReason()
+data object Timeout : StopReason()
 data class WithError(val error: WifiP2pServiceErrors) : StopReason()
 data class MapSuccessfullyLoaded(val name: String) : StopReason()
 

@@ -1,8 +1,8 @@
 package com.peterlaurence.trekme.features.record.di
 
 import com.peterlaurence.trekme.core.settings.Settings
+import com.peterlaurence.trekme.di.ApplicationScope
 import com.peterlaurence.trekme.di.IoDispatcher
-import com.peterlaurence.trekme.features.common.data.dao.IgnApiDao
 import com.peterlaurence.trekme.features.record.data.datasource.AppRecordRestorer
 import com.peterlaurence.trekme.features.record.data.datasource.IgnElevationDataSource
 import com.peterlaurence.trekme.features.record.domain.datasource.ElevationDataSource
@@ -16,6 +16,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 
@@ -24,8 +25,16 @@ import javax.inject.Singleton
 object RecordModule {
     @Singleton
     @Provides
-    fun bindElevationRepository(elevationDataSource: ElevationDataSource): ElevationRepository {
-        return ElevationRepository(Dispatchers.Default, Dispatchers.IO, elevationDataSource)
+    fun bindElevationRepository(
+        elevationDataSource: ElevationDataSource,
+        @ApplicationScope processScope: CoroutineScope
+    ): ElevationRepository {
+        return ElevationRepository(
+            dispatcher = Dispatchers.Default,
+            ioDispatcher = Dispatchers.IO,
+            elevationDataSource = elevationDataSource,
+            processScope = processScope
+        )
     }
 
     @Singleton
@@ -37,10 +46,9 @@ object RecordModule {
     @Singleton
     @Provides
     fun bindElevationDataSource(
-        ignApiDao: IgnApiDao,
         @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): ElevationDataSource {
-        return IgnElevationDataSource(ignApiDao, ioDispatcher)
+        return IgnElevationDataSource(ioDispatcher)
     }
 
     @Singleton

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -35,8 +36,10 @@ fun MapTopAppBar(
     isShowingGpsData: Boolean,
     hasBeacons: Boolean,
     hasTrackFollow: Boolean,
+    hasMarkerManage: Boolean,
     onMenuClick: () -> Unit,
     onManageTracks: () -> Unit,
+    onManageMarkers: () -> Unit,
     onFollowTrack: () -> Unit,
     onToggleShowOrientation: () -> Unit,
     onAddMarker: () -> Unit,
@@ -47,10 +50,13 @@ fun MapTopAppBar(
     onToggleSpeed: () -> Unit,
     onToggleLockPosition: () -> Unit,
     onToggleShowGpsData: () -> Unit,
-    onShowTrackFollowHelp: () -> Unit
+    onNavigateToShop: () -> Unit
 ) {
     var expandedMenu by remember { mutableStateOf(false) }
     var expandedAddOnMap by remember { mutableStateOf(false) }
+    var isShowingTrackFollowHelp by rememberSaveable { mutableStateOf(false) }
+    var isShowingTrackFollowRedirect by rememberSaveable { mutableStateOf(false) }
+    var isShowingManageMarkersRedirect by rememberSaveable { mutableStateOf(false) }
 
     TopAppBar(
         title = {
@@ -148,27 +154,66 @@ fun MapTopAppBar(
                             Spacer(Modifier.weight(1f))
                         }
                     )
-                    if (hasTrackFollow) {
-                        DropdownMenuItem(
-                            onClick = {
-                                expandedMenu = false
-                                onFollowTrack()
-                            },
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(stringResource(id = R.string.follow_track_menu))
-                                    Spacer(Modifier.weight(1f))
-                                    IconButton(onClick = onShowTrackFollowHelp) {
+                    DropdownMenuItem(
+                        onClick = {
+                            expandedMenu = false
+                            if (hasMarkerManage) {
+                                onManageMarkers()
+                            } else {
+                                isShowingManageMarkersRedirect = true
+                            }
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(id = R.string.manage_markers_menu))
+                                Spacer(Modifier.weight(1f))
+                                if (!hasMarkerManage) {
+                                    IconButton(
+                                        onClick = { isShowingManageMarkersRedirect = true }
+                                    ) {
                                         Image(
-                                            painter = painterResource(id = R.drawable.help_circle_outline),
+                                            painter = painterResource(id = R.drawable.ic_lock),
                                             contentDescription = null,
                                             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary)
                                         )
                                     }
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
+                    DropdownMenuItem(
+                        onClick = {
+                            expandedMenu = false
+                            if (hasTrackFollow) {
+                                onFollowTrack()
+                            } else {
+                                isShowingTrackFollowRedirect = true
+                            }
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(id = R.string.follow_track_menu))
+                                Spacer(Modifier.weight(1f))
+                                if (hasTrackFollow) {
+                                    IconButton(onClick = { isShowingTrackFollowHelp = true }) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.help_circle_outline),
+                                            contentDescription = null,
+                                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary)
+                                        )
+                                    }
+                                } else {
+                                    IconButton(onClick = { isShowingTrackFollowRedirect = true }) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_lock),
+                                            contentDescription = null,
+                                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    )
                     DropdownMenuItem(
                         onClick = onToggleSpeed,
                         text = {
@@ -251,6 +296,82 @@ fun MapTopAppBar(
             }
         }
     )
+
+    if (isShowingTrackFollowHelp) {
+        AlertDialog(
+            onDismissRequest = { isShowingTrackFollowHelp = false },
+            text = {
+                Text(text = stringResource(id = R.string.track_follow_help))
+            },
+            confirmButton = {
+                TextButton(onClick = { isShowingTrackFollowHelp = false }) {
+                    Text(text = stringResource(id = R.string.ok_dialog))
+                }
+            },
+        )
+    }
+
+    if (isShowingTrackFollowRedirect) {
+        AlertDialog(
+            onDismissRequest = { isShowingTrackFollowRedirect = false },
+            title = {
+                Text(stringResource(id = R.string.map_settings_trekme_extended_title))
+            },
+            text = {
+                Text(text = stringResource(id = R.string.track_follow_help))
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        isShowingTrackFollowRedirect = false
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.cancel_dialog_string))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isShowingTrackFollowRedirect = false
+                        onNavigateToShop()
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.ok_dialog))
+                }
+            },
+        )
+    }
+
+    if (isShowingManageMarkersRedirect) {
+        AlertDialog(
+            onDismissRequest = { isShowingManageMarkersRedirect = false },
+            title = {
+                Text(stringResource(id = R.string.map_settings_trekme_extended_title))
+            },
+            text = {
+                Text(text = stringResource(id = R.string.manage_markers_help))
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        isShowingManageMarkersRedirect = false
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.cancel_dialog_string))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isShowingManageMarkersRedirect = false
+                        onNavigateToShop()
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.ok_dialog))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -263,6 +384,39 @@ private fun IconAndText(icon: @Composable (Modifier) -> Unit, textId: Int, onCli
     ) {
         icon(Modifier.align(Alignment.TopCenter))
         Text(stringResource(id = textId), Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+@Preview
+@Composable
+private fun MapTopAppBarPreview() {
+    TrekMeTheme {
+        MapTopAppBar(
+            title = "A map",
+            isShowingOrientation = false,
+            isShowingDistance = false,
+            isShowingDistanceOnTrack = false,
+            isShowingSpeed = false,
+            isLockedOnPosition = false,
+            isShowingGpsData = false,
+            hasBeacons = true,
+            hasTrackFollow = false,
+            hasMarkerManage = true,
+            onMenuClick = { },
+            onManageTracks = { },
+            onManageMarkers = { },
+            onFollowTrack = { },
+            onToggleShowOrientation = { },
+            onAddMarker = { },
+            onAddLandmark = { },
+            onAddBeacon = { },
+            onShowDistance = { },
+            onToggleDistanceOnTrack = { },
+            onToggleSpeed = { },
+            onToggleLockPosition = { },
+            onToggleShowGpsData = { },
+            onNavigateToShop = { }
+        )
     }
 }
 

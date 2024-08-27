@@ -26,6 +26,7 @@
   * [GPX recording](#gpx-recording)
   * [Follow a track](#follow-a-track)
   * [Manage trails](#manage-trails)
+  * [Manage markers](#manage-markers)
 5. [Settings](#settings)
   * [Start on the last map](#start-on-the-last-map)
   * [Download folder](#download-folder)
@@ -78,12 +79,12 @@ In this mode, you use a specific map provider. Google map is a well known exampl
 But their maps aren't ideal for hiking. When possible, it is better to use maps with more terrain
 details. 
 
-For example, France's IGN is ideal when you are in France and its territories (Guadeloupe, Martinique,
-Réunion, Tahiti, etc.). There is also USGS for the USA. However, not all countries have similar service, 
-so sometimes you will have to fallback to OpenStreetMap.
+For example, USGS is USA's official map provider. France's IGN is ideal when you are in France and 
+its territories. However, not all countries have similar service.
+OpenStreetMap has a worldwide coverage. In particular, OpenStreetMap HD has a much better quality. 
 
-Some providers require you to subscribe to download their maps. This step is free for individuals, 
-unless you have specific needs like heavy loads for your organization.
+Some providers require a subscription to download their maps. The others are free for maps of 
+reasonable size.
 
 From the "Create map" option menu, you get to choose between available providers:
 
@@ -128,7 +129,7 @@ have the minimum and maximum levels to 12 and 17 respectively.
 
 The number of tiles that will be downloaded depends on your choice of minimum and maximum levels.
 The lower the minimum zoom, and the higher the maximum zoom, the greater is number of tiles. This
-is indicated by the "number of transactions". Downloading thousands of transactions may take hours..
+is indicated by the estimated size in Mb. Downloading hundreds of Mb may take hours..
 so choose carefully your area and levels to only download the tiles you actually need.
 
 Finally, press the download button. A download service is launched and you get a notification. From
@@ -138,17 +139,27 @@ the notification center of your Android device, you can either:
 * Cancel the download
 
 When the service finishes the download, you get a notification and a new map is available in the map
-list. It is already calibrated and ready to be used. You can set a presentation image so you can
-easily identify it in the map list. To do so, press the edit button at the bottom left of the map
-card (in the map list menu). 
+list. You can set a presentation image so you can easily identify it in the map list. To do so, 
+press the edit button at the bottom left of the map card (in the map list menu). 
 
 From the map configuration view, you can:
 
 * Change the thumbnail image,
-* Change the projection (only if you know what you're doing),
-* Change the calibration points (only if you know what you're doing),
 * Change the name,
 * Save the map
+
+#### Resume a stopped download
+
+When a map download was stopped (either manually or e.g when shutting down the device), the map is
+now incomplete. You can tell that by the warning bellow:
+
+<p align="center">
+<img src="doc/images/download-abort-en.jpg" width="300">
+</p>
+
+You can resume the download by using EDIT > "Analyze & repair". The map repair will fetch the 
+missing tiles. This is possible if you have TrekMe Extended. Otherwise, it's advised to delete the 
+incomplete map.
 
 ### Import from an archive
 
@@ -292,6 +303,11 @@ Even if you close TrekMe, you will find your live route the next time you open i
 
 ### Import a GPX track
 
+There's two different ways for importing a gpx track. Using the first one, you import a track for a
+specific map, while using the second one you import a track for all maps which can display the track.
+
+#### Import gpx for a specific map
+
 While viewing a map, press the button below on the upper right corner :
 
 <p align="center">
@@ -316,6 +332,20 @@ Using the menu at the top right corner (the three vertical dots), which appears 
 
 * Rename the selected track
 * Center on the selected track on the map (only available with TrekMe Extended)
+
+#### Import gpx for all maps
+
+From the main menu > My trails, click on bellow the button menu, then select "Import files":
+
+<p align="center">
+<img src="doc/images/gpx-import-menu_en.png" width="300">
+</p>
+
+You can then select the file(s) you wish to import. The track(s) will then be imported for all maps
+which can display the track(s).
+
+Note that tracks imported this way are common to all maps. This means that deleting a track from
+this screen deletes the track for all maps.
 
 ### GPX recording
 
@@ -366,7 +396,7 @@ The track following feature runs as a background service, which only works when 
 
 ### Manage trails
 
-From the main menu > My trails, the list of gpx recordings appear. Four buttons at the bottom-left enable you to:
+From the main menu > Manage trails, the list of gpx recordings appear. Four buttons at the bottom-left enable you to:
 
 * Rename the track,
 * Import the track into an existing map (press the import button at the bottom of the list, then choose the map),
@@ -405,6 +435,22 @@ minimum and maximum elevations.
 
 <p align="center">
 <img src="doc/images/ele-profile-en.jpg" width="300">
+</p>
+
+### Manage markers
+
+From the main menu > Manage markers, the list of markers is shown. From this screen, you can search
+for a specific marker from its name.
+
+<p align="center">
+<img src="doc/images/manage-markers-en.jpg" width="300">
+</p>
+
+For each marker, several actions are possible using the drop-down menu on the right, such as centering
+the map on the marker.
+
+<p align="center">
+<img src="doc/images/manage-markers-edit-en.jpg" width="300">
 </p>
 
 ## Settings

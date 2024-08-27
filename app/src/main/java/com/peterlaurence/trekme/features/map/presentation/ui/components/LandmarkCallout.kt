@@ -2,10 +2,11 @@ package com.peterlaurence.trekme.features.map.presentation.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,12 +16,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.features.common.presentation.ui.widgets.Callout
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.landmarkCalloutWidthDp
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
 @Composable
 fun LandmarkCallout(
-    size: DpSize,
     lat: Double,
     lon: Double,
     shouldAnimate: Boolean,
@@ -31,10 +32,9 @@ fun LandmarkCallout(
     Callout(
         shouldAnimate = shouldAnimate,
         onAnimationDone = onAnimationDone,
-        elevation = 0.dp,
     ) {
         Column(
-            Modifier.size(size),
+            Modifier.width(landmarkCalloutWidthDp.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -47,11 +47,11 @@ fun LandmarkCallout(
             Text(
                 text = txt,
                 modifier = Modifier.padding(vertical = 4.dp),
-                fontSize = 12.sp,
-                maxLines = 1
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                maxLines = 2
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Divider(thickness = 0.5.dp)
+            HorizontalDivider(thickness = 0.5.dp)
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -67,10 +67,11 @@ fun LandmarkCallout(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Divider(
+                VerticalDivider(
                     Modifier
                         .height(16.dp)
-                        .width(1.dp), thickness = 0.5.dp)
+                        .width(1.dp), thickness = 0.5.dp
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
                     painterResource(id = R.drawable.ic_delete_forever_black_24dp),

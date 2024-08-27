@@ -29,9 +29,11 @@ import com.peterlaurence.trekme.features.maplist.presentation.ui.components.Down
 import com.peterlaurence.trekme.features.maplist.presentation.ui.components.WelcomeScreen
 import com.peterlaurence.trekme.features.maplist.presentation.ui.components.MapCard
 import com.peterlaurence.trekme.features.maplist.presentation.ui.components.PendingScreen
+import com.peterlaurence.trekme.features.maplist.presentation.viewmodel.DownloadState
 import com.peterlaurence.trekme.features.maplist.presentation.viewmodel.MapListState
 import com.peterlaurence.trekme.features.maplist.presentation.viewmodel.MapListViewModel
 import com.peterlaurence.trekme.features.maplist.presentation.viewmodel.MapSettingsViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.*
 
 @Composable
@@ -41,7 +43,8 @@ fun MapListStateful(
     onNavigateToMapCreate: () -> Unit,
     onNavigateToMapSettings: () -> Unit,
     onNavigateToMap: (UUID) -> Unit,
-    onNavigateToExcursionSearch: () -> Unit
+    onNavigateToExcursionSearch: () -> Unit,
+    onMainMenuClick: () -> Unit
 ) {
     val intents = object : MapListIntents {
         override fun onMapClicked(mapId: UUID) {
@@ -84,38 +87,47 @@ fun MapListStateful(
     }
 
     val mapListState by mapListViewModel.mapListState.collectAsState()
-    MapListUi(mapListState, intents, onMainMenuClick = mapListViewModel::onMainMenuClick)
+    val downloadState by mapListViewModel.downloadState.collectAsState()
+    MapListUi(mapListState, downloadState, intents, onMainMenuClick = onMainMenuClick)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MapListUi(state: MapListState, intents: MapListIntents, onMainMenuClick: () -> Unit) {
+private fun MapListUi(
+    state: MapListState,
+    downloadState: DownloadState,
+    intents: MapListIntents,
+    onMainMenuClick: () -> Unit
+) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(id = R.string.app_name)) },
-                navigationIcon = {
-                    IconButton(onClick = onMainMenuClick) {
-                        Icon(Icons.Filled.Menu, contentDescription = "")
+            // Prevent the user from accessing the main menu while maps aren't loaded yet.
+            if (!state.isMapListInitializing) {
+                TopAppBar(
+                    title = { Text(text = stringResource(id = R.string.app_name)) },
+                    navigationIcon = {
+                        IconButton(onClick = onMainMenuClick) {
+                            Icon(Icons.Filled.Menu, contentDescription = "")
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         Column(
             Modifier.padding(paddingValues)
         ) {
-            if (state.isDownloadPending) {
+            if (downloadState.isDownloadPending) {
                 DownloadCard(
                     Modifier
                         .background(MaterialTheme.colorScheme.background)
                         .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
-                    state.downloadProgress,
+                    downloadState.downloadProgress,
                     intents::onCancelDownload
                 )
             }
 
-            if (state.isMapListLoading && !state.isDownloadPending) {
+            if (state.isMapListInitializing && !downloadState.isDownloadPending) {
                 PendingScreen()
             } else {
                 val listState = rememberLazyListState()
@@ -164,16 +176,25 @@ interface MapListIntents {
 @Preview(heightDp = 450, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun MapListPreview() {
+    fun makeItem(name: String): MapItem {
+        return MapItem(
+            UUID.randomUUID(),
+            titleFlow = MutableStateFlow("A map 1"),
+            isDownloadPending = MutableStateFlow(false),
+            image = MutableStateFlow(null)
+        )
+    }
+
     val mapList = listOf(
-        MapItem(UUID.randomUUID(), title = "A map 1"),
-        MapItem(UUID.randomUUID(), title = "A map 2"),
-        MapItem(UUID.randomUUID(), title = "A map 3"),
-        MapItem(UUID.randomUUID(), title = "A map 4")
+        makeItem("A map 1"),
+        makeItem("A map 2"),
+        makeItem("A map 3"),
+        makeItem("A map 4")
     )
 
     var mapListState by remember {
         mutableStateOf(
-            MapListState(mapList, false, downloadProgress = 25, isDownloadPending = true)
+            MapListState(mapList, false)
         )
     }
 
@@ -214,6 +235,19 @@ private fun MapListPreview() {
     }
 
     TrekMeTheme {
-        MapListUi(mapListState, intents, onMainMenuClick = {})
+        MapListUi(
+            state = mapListState,
+            downloadState = DownloadState(25, true),
+            intents = intents,
+            onMainMenuClick = {}
+        )
+    }
+}
+
+@Preview(heightDp = 450)
+@Composable
+private fun PendingPreview() {
+    TrekMeTheme {
+        PendingScreen()
     }
 }

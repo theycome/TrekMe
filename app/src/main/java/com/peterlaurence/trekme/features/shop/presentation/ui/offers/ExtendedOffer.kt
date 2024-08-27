@@ -64,50 +64,28 @@ private fun ExtendedOfferHeaderUi(purchaseState: PurchaseState, trialInfo: Trial
 }
 
 @Composable
-fun TrekMeExtendedPurchasedContent(withIgn: Boolean) {
+fun TrekMeExtendedContent(withIgn: Boolean, purchased: Boolean, onIgnSelectionChanged: (Boolean) -> Unit) {
     CheckSeparator()
     TitleRow(R.string.trekme_extended_maps_title)
     LineItem(R.string.trekme_extended_osm_hd_desc)
+    LineItem(id = R.string.no_download_limit)
     LineItem(id = R.string.osm_level_17)
 
-    if (withIgn) {
-        CheckSeparator()
-        TitleRow(R.string.trekme_extended_ign_maps_title)
-        LineItem(R.string.trekme_extended_ign_maps_offline)
-        LineItem(R.string.trekme_extended_ign_maps_satellite)
-        LineItem(R.string.trekme_extended_ign_overlay_desc)
-    }
-
-    CheckSeparator()
-    TitleRow(R.string.trekme_extended_advanced_ft)
-    LineItem(id = R.string.track_follow_shop)
-    LineItem(id = R.string.add_beacons)
-    LineItem(id = R.string.create_map_from_track)
-    LineItem(id = R.string.center_on_track)
-    LineItem(id = R.string.define_elevation_fix)
-    LineItem(id = R.string.no_ads)
-
-    if (withIgn) {
-        NotaBene()
-    }
-}
-
-@Composable
-fun TrekMeExtendedContent(withIgn: Boolean, onIgnSelectionChanged: (Boolean) -> Unit) {
-    CheckSeparator()
-    TitleRow(R.string.trekme_extended_maps_title)
-    LineItem(R.string.trekme_extended_osm_hd_desc)
-    LineItem(id = R.string.osm_level_17)
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 32.dp)
-            .clickable { onIgnSelectionChanged(!withIgn) }
-    ) {
-        Checkbox(checked = withIgn, onCheckedChange = onIgnSelectionChanged)
-        Text(text = stringResource(id = R.string.trekme_extended_activate_ign), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    if (!purchased) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 32.dp)
+                .clickable { onIgnSelectionChanged(!withIgn) }
+        ) {
+            Checkbox(checked = withIgn, onCheckedChange = onIgnSelectionChanged)
+            Text(
+                text = stringResource(id = R.string.trekme_extended_activate_ign),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 
     if (withIgn) {
@@ -121,6 +99,7 @@ fun TrekMeExtendedContent(withIgn: Boolean, onIgnSelectionChanged: (Boolean) -> 
     CheckSeparator()
     TitleRow(R.string.trekme_extended_advanced_ft)
     LineItem(id = R.string.track_follow_shop)
+    LineItem(id = R.string.trekme_extended_update_maps)
     LineItem(id = R.string.add_beacons)
     LineItem(id = R.string.create_map_from_track)
     LineItem(id = R.string.center_on_track)
@@ -164,14 +143,13 @@ private fun TitleRow(@StringRes id: Int) {
 @Composable
 private fun LineItem(@StringRes id: Int) {
     Row(
-        Modifier
-            .padding(bottom = 4.dp)
-            .padding(horizontal = 32.dp)) {
-        Text("\u2022")
+        Modifier.padding(horizontal = 32.dp),
+    ) {
+        Text("\u2022", modifier = Modifier.alignByBaseline())
         Text(
             stringResource(id),
             fontSize = 14.sp,
-            modifier = Modifier.padding(start = 8.dp),
+            modifier = Modifier.padding(start = 8.dp).alignByBaseline(),
             lineHeight = 18.sp,
             style = TextStyle(hyphens = Hyphens.Auto)
         )

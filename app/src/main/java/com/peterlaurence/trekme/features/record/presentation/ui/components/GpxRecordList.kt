@@ -1,5 +1,7 @@
 package com.peterlaurence.trekme.features.record.presentation.ui.components
 
+import android.content.Context
+import android.net.Uri
 import android.os.ParcelUuid
 import android.os.Parcelable
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +30,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ShareCompat
+import androidx.lifecycle.Lifecycle
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.units.UnitFormatter
 import com.peterlaurence.trekme.features.common.domain.model.Loading
@@ -35,11 +38,12 @@ import com.peterlaurence.trekme.features.common.domain.model.RecordingsAvailable
 import com.peterlaurence.trekme.features.common.presentation.ui.scrollbar.drawVerticalScrollbar
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme
 import com.peterlaurence.trekme.features.record.domain.model.RecordingData
-import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.MapSelectionDialogStateful
+import com.peterlaurence.trekme.features.common.presentation.ui.dialogs.MapSelectionDialogStateful
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.RecordingRenameDialog
 import com.peterlaurence.trekme.features.record.presentation.viewmodel.RecordViewModel
+import com.peterlaurence.trekme.features.record.presentation.viewmodel.RecordingEvent
 import com.peterlaurence.trekme.features.record.presentation.viewmodel.RecordingStatisticsViewModel
-import com.peterlaurence.trekme.util.launchFlowCollectionWithLifecycle
+import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import kotlinx.parcelize.Parcelize
 import java.util.*
 
@@ -52,6 +56,7 @@ fun GpxRecordListStateful(
     onGoToTrailSearchClick: () -> Unit
 ) {
     val state by statViewModel.recordingDataFlow.collectAsState()
+    val isTrackSharePending by statViewModel.isTrackSharePending.collectAsState()
 
     if (state is Loading) {
         LoadingList(modifier)
@@ -80,8 +85,22 @@ fun GpxRecordListStateful(
 
     val lazyListState = rememberLazyListState()
 
-    launchFlowCollectionWithLifecycle(statViewModel.newRecordingEventFlow) {
-        lazyListState.animateScrollToItem(0)
+    val context = LocalContext.current
+    LaunchedEffectWithLifecycle(
+        statViewModel.eventChannel,
+        minActiveState = Lifecycle.State.RESUMED
+    ) { event ->
+        when (event) {
+            RecordingEvent.NewRecording -> {
+                lazyListState.animateScrollToItem(0)
+            }
+            is RecordingEvent.ShareRecordings -> {
+                sendShareIntent(context, event.uris)
+            }
+            RecordingEvent.ShareRecordingFailure -> {
+                // TODO
+            }
+        }
     }
 
     /* Don't include this lambda in the actioner, as it would cause all items to be recomposed on
@@ -117,7 +136,6 @@ fun GpxRecordListStateful(
         statViewModel.importRecordings(uriList)
     }
 
-    val context = LocalContext.current
     val actioner: Actioner = { action ->
         when (action) {
             is Action.OnMultiSelectionClick -> {
@@ -144,21 +162,9 @@ fun GpxRecordListStateful(
                     recordingForMapImport = ParcelUuid(selected.id)
                 }
             }
-            is  Action.OnShareClick -> {
+            is Action.OnShareClick -> {
                 val selectedList = getSelectedList(dataById, items)
-                val intentBuilder = ShareCompat.IntentBuilder(context)
-                    .setType("text/plain")
-                selectedList.forEach {
-                    try {
-                        val uri = statViewModel.getRecordingUri(it)
-                        if (uri != null) {
-                            intentBuilder.addStream(uri)
-                        }
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-                    }
-                }
-                intentBuilder.startChooser()
+                statViewModel.shareRecordings(selectedList.map { it.id })
             }
             is Action.OnElevationGraphClick -> {
                 val selected = getSelected(dataById, items)
@@ -179,6 +185,7 @@ fun GpxRecordListStateful(
             items = items,
             isMultiSelectionMode = isMultiSelectionMode,
             lazyListState = lazyListState,
+            isTrackSharePending = isTrackSharePending,
             onItemClick,
             actioner
         )
@@ -203,8 +210,7 @@ fun GpxRecordListStateful(
 
     recordingForMapImport?.also {
         MapSelectionDialogStateful(
-            recordId = it.uuid,
-            onMapSelected = { map, recordId -> recordViewModel.importRecordInMap(map.id, recordId) },
+            onMapSelected = { map -> recordViewModel.importRecordInMap(map.id, it.uuid) },
             onDismissRequest = { recordingForMapImport = null }
         )
     }
@@ -217,6 +223,7 @@ private fun GpxRecordList(
     items: List<SelectableRecordingItem>,
     isMultiSelectionMode: Boolean,
     lazyListState: LazyListState,
+    isTrackSharePending: Boolean,
     onItemClick: (SelectableRecordingItem) -> Unit,
     actioner: Actioner,
 ) {
@@ -249,7 +256,7 @@ private fun GpxRecordList(
             }
 
             if (selectionCount > 0) {
-                BottomBarButtons(selectionCount, actioner)
+                BottomBarButtons(selectionCount, isTrackSharePending, actioner)
             }
         }
     }
@@ -319,7 +326,11 @@ private fun RecordingActionBar(
 }
 
 @Composable
-private fun BottomBarButtons(selectionCount: Int, actioner: Actioner) {
+private fun BottomBarButtons(
+    selectionCount: Int,
+    isTrackSharePending: Boolean,
+    actioner: Actioner
+) {
     Row(
         Modifier.padding(horizontal = 8.dp, vertical = 0.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -342,24 +353,33 @@ private fun BottomBarButtons(selectionCount: Int, actioner: Actioner) {
             enabled = selectionCount == 1
         ) {
             Icon(
-                painterResource(id = R.drawable.import_30dp),
+                painterResource(id = R.drawable.import_24dp),
                 contentDescription = stringResource(
                     id = R.string.recording_import_desc
                 )
             )
         }
-        IconButton(
-            onClick = { actioner(Action.OnShareClick) },
-            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-            enabled = selectionCount > 0
-        ) {
-            Icon(
-                painterResource(id = R.drawable.ic_share_black_24dp),
-                contentDescription = stringResource(
-                    id = R.string.recording_share_desc
+        Box {
+            IconButton(
+                onClick = { actioner(Action.OnShareClick) },
+                colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                enabled = selectionCount > 0 && !isTrackSharePending
+            ) {
+                Icon(
+                    painterResource(id = R.drawable.ic_share_black_24dp),
+                    contentDescription = stringResource(
+                        id = R.string.recording_share_desc
+                    )
                 )
-            )
+            }
+            if (isTrackSharePending) {
+                CircularProgressIndicator(
+                    Modifier.align(Alignment.Center).size(20.dp),
+                    strokeWidth = 2.dp
+                )
+            }
         }
+
         IconButton(
             onClick = { actioner(Action.OnElevationGraphClick) },
             colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary),
@@ -406,6 +426,19 @@ private fun LoadingList(modifier: Modifier = Modifier) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
     }
+}
+
+private fun sendShareIntent(context: Context, uris: List<Uri>) {
+    val intentBuilder = ShareCompat.IntentBuilder(context)
+        .setType("text/plain")
+    uris.forEach { uri ->
+        try {
+            intentBuilder.addStream(uri)
+        } catch (e: IllegalArgumentException) {
+            e.printStackTrace()
+        }
+    }
+    intentBuilder.startChooser()
 }
 
 private fun RecordingData.toModel(isSelected: Boolean): SelectableRecordingItem {
@@ -496,18 +529,17 @@ private fun NoTrails(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ClickableCard(
     iconId: Int,
     textId: Int,
     onClick: () -> Unit
 ) {
-    Card(onClick = onClick) {
+    OutlinedCard(onClick = onClick) {
         Column(
             Modifier
                 .width(120.dp)
-                .padding(8.dp),
+                .padding(vertical = 16.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
@@ -521,7 +553,34 @@ private fun ClickableCard(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(heightDp = 500)
+@Composable
+private fun GpxRecordListPreview() {
+    TrekMeTheme {
+        val stats = RecordStats(
+            "11.51 km",
+            "+127 m",
+            "-655 m",
+            "2h46",
+            "8.2 km/h"
+        )
+        GpxRecordList(
+            items = listOf(
+                SelectableRecordingItem(
+                    id = UUID.randomUUID(), name = "Track 1", isSelected = false, stats = stats),
+                SelectableRecordingItem(id = UUID.randomUUID(), name = "Track 2", isSelected = true, stats = stats),
+                SelectableRecordingItem(id = UUID.randomUUID(), name = "Track 3", isSelected = false, stats = stats)
+            ),
+            isMultiSelectionMode = false,
+            lazyListState = LazyListState(),
+            isTrackSharePending = false,
+            onItemClick = {},
+            actioner = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 500)
 @Composable
 private fun NoTrailsPreview() {
     TrekMeTheme {

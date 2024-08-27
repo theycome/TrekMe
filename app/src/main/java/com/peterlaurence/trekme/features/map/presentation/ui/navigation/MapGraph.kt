@@ -1,23 +1,19 @@
 package com.peterlaurence.trekme.features.map.presentation.ui.navigation
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.navigation
 
 
-@Composable
-fun MapGraph(
-    modifier: Modifier = Modifier,
+fun NavGraphBuilder.mapGraph(
+    navController: NavController,
+    onNavigateToShop: () -> Unit,
+    onMainMenuClick: () -> Unit
 ) {
-    val navController = rememberNavController()
-    NavHost(
-        navController = navController,
-        startDestination = mapDestination,
-        modifier = modifier
-    ) {
+    navigation(startDestination = mapDestination, route = mapSubGraph) {
         mapScreen(
             onNavigateToTrackManage = { navController.navigateToTracksManage() },
+            onNavigateToMarkersManage = { navController.navigateToMarkersManage() },
             onNavigateToMarkerEdit = { markerId, mapId ->
                 navController.navigateToMarkerEdit(markerId, mapId.toString())
             },
@@ -26,11 +22,23 @@ fun MapGraph(
             },
             onNavigateToBeaconEdit = { beaconId, mapId ->
                 navController.navigateToBeaconEdit(beaconId, mapId.toString())
-            }
+            },
+            onNavigateToShop = onNavigateToShop,
+            onMainMenuClick = onMainMenuClick
         )
 
         tracksManageScreen(
             onNavigateToMap = navController::navigateUp,
+            onBackClick = navController::navigateUp
+        )
+
+        markersManageScreen(
+            onEditMarker = { markerId, mapId ->
+                navController.navigateToMarkerEdit(markerId, mapId)
+            },
+            onEditWaypoint = { wptId, excursionId ->
+                navController.navigateToExcursionWaypointEdit(wptId, excursionId)
+            },
             onBackClick = navController::navigateUp
         )
 
@@ -41,3 +49,5 @@ fun MapGraph(
         beaconEditScreen(onBack = navController::navigateUp)
     }
 }
+
+internal const val mapSubGraph = "map_sub_graph"

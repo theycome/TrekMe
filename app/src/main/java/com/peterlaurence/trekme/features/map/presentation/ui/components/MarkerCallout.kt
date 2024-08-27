@@ -1,23 +1,37 @@
 package com.peterlaurence.trekme.features.map.presentation.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.peterlaurence.trekme.R
@@ -26,9 +40,8 @@ import com.peterlaurence.trekme.features.common.presentation.ui.widgets.Callout
 
 @Composable
 fun MarkerCallout(
-    size: DpSize,
     title: String,
-    subTitle: String,
+    subTitle: AnnotatedString,
     shouldAnimate: Boolean,
     onAnimationDone: () -> Unit,
     onEditAction: () -> Unit,
@@ -39,47 +52,46 @@ fun MarkerCallout(
     Callout(
         shouldAnimate = shouldAnimate,
         onAnimationDone = onAnimationDone,
-        elevation = 0.dp,
-    ) {
-        Column(
-            Modifier.size(size),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(Modifier.fillMaxWidth()) {
-                Text(
-                    text = title,
-                    modifier = Modifier
-                        .padding(top = 11.dp, start = 8.dp, end = 8.dp)
-                        .align(Alignment.TopCenter),
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    style = LocalTextStyle.current.copy(hyphens = Hyphens.Auto),
-                    fontSize = 14.sp
-                )
-
+        rightContent = {
+            IconButton(
+                onClick = onStartItinerary,
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .shadow(3.dp, CircleShape)
+                    .clip(CircleShape)
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
+            ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_itinerary),
-                    modifier = Modifier
-                        .padding(top = 8.dp, end = 8.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onStartItinerary)
-                        .padding(0.dp)
-                        .alpha(1f)
-                        .size(24.dp)
-                        .align(Alignment.TopEnd),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     contentDescription = null
                 )
             }
+        }
+    ) {
+        Column(
+            Modifier.width(
+                (markerCalloutWidthDp - 44).dp, // 44 is the width of the right content including margin
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.padding(top = 11.dp, start = 8.dp, end = 8.dp),
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(hyphens = Hyphens.Auto),
+                fontSize = 14.sp
+            )
 
             Text(
                 text = subTitle,
-                modifier = Modifier.padding(vertical = 4.dp),
-                fontSize = 10.sp
+                modifier = Modifier.padding(vertical = 8.dp),
+                fontSize = 10.sp,
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Divider(thickness = 0.5.dp)
+            HorizontalDivider(thickness = 0.5.dp)
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -95,10 +107,11 @@ fun MarkerCallout(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Divider(
+                VerticalDivider(
                     Modifier
                         .height(16.dp)
-                        .width(1.dp), thickness = 0.5.dp)
+                        .width(1.dp), thickness = 0.5.dp
+                )
                 Icon(
                     painterResource(id = R.drawable.cursor_move),
                     contentDescription = stringResource(id = R.string.map_move_landmark),
@@ -111,10 +124,11 @@ fun MarkerCallout(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Divider(
-                    Modifier
-                        .height(16.dp)
-                        .width(1.dp), thickness = 0.5.dp)
+                VerticalDivider(
+                        Modifier
+                            .height(16.dp)
+                            .width(1.dp), thickness = 0.5.dp
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
                     painterResource(id = R.drawable.ic_delete_forever_black_24dp),
@@ -132,14 +146,20 @@ fun MarkerCallout(
     }
 }
 
+const val markerCalloutWidthDp = 244
+const val markerCalloutHeightDp = 120
+
 @Preview
 @Composable
 private fun MarkerCalloutPreview() {
     TrekMeTheme {
         MarkerCallout(
-            size = DpSize(200.dp, 120.dp),
             title = "Les petites chutes souterraines du Plateau des Cascades",
-            subTitle = "Lat : -21.2059 Lon : 55.6268",
+            subTitle = makeMarkerSubtitle(
+                latitude = -21.2059,
+                longitude = 55.6268,
+                distanceInMeters = 14237.0
+            ),
             shouldAnimate = false,
             onAnimationDone = {},
             onEditAction = {},

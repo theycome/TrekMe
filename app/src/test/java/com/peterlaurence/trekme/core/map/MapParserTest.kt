@@ -22,11 +22,10 @@ import kotlin.test.assertNotNull
  */
 @RunWith(RobolectricTestRunner::class)
 class MapParserTest {
-    private val gson = MapModule.provideGson()
     private val json = MapModule.provideJson()
-    private val mapSaverDao = MapSaverDaoImpl(Dispatchers.Unconfined, Dispatchers.IO, gson)
+    private val mapSaverDao = MapSaverDaoImpl(Dispatchers.Unconfined, Dispatchers.IO, json)
     private val mapLoaderDao = MapLoaderDaoFileBased(
-        Dispatchers.IO, mapSaverDao, gson, json
+        mapSaverDao, json, Dispatchers.IO
     )
 
     private val routeDao = RouteDaoImpl(Dispatchers.IO, Dispatchers.Unconfined, json)
@@ -34,8 +33,7 @@ class MapParserTest {
 
     @Test
     fun mapRoutesParse() = runBlocking {
-        val mapDirURL =
-            MapImportInteractorTest::class.java.classLoader!!.getResource("map-with-routes")
+        val mapDirURL = MapImportInteractorTest::class.java.classLoader!!.getResource("map-with-routes")
         val mapDir = File(mapDirURL.toURI())
 
         assertTrue(mapDir.exists())

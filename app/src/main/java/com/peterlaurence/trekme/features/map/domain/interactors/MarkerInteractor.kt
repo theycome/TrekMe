@@ -51,10 +51,10 @@ class MarkerInteractor @Inject constructor(
     }
 
     /**
-     * Update the marker position and save.
+     * Add the marker position and save.
      * [x] and [y] are expected to be normalized coordinates.
      */
-    fun updateAndSaveMarker(marker: Marker, map: Map, x: Double, y: Double) = scope.launch {
+    fun addMarkerAtPosition(marker: Marker, map: Map, x: Double, y: Double) = scope.launch {
         val mapBounds = map.mapBounds
 
         val lonLat = getLonLatFromNormalizedCoordinate(x, y, map.projection, mapBounds)
@@ -68,16 +68,33 @@ class MarkerInteractor @Inject constructor(
     }
 
     /**
+     * Update markers now.
+     */
+    fun updateMarkers(markers: List<Marker>, map: Map) = scope.launch {
+        val markersById = markers.associateBy { it.id }
+
+        map.markers.update {
+            it.map { m ->
+                markersById[m.id] ?: m
+            }
+        }
+
+        markersDao.saveMarkers(map)
+    }
+
+    /**
      * Save marker (debounced)
      */
-    fun saveMarker(mapId: UUID, marker: Marker) {
+    fun saveMarkerDebounced(mapId: UUID, marker: Marker) {
         updateMarkerJob?.cancel()
         updateMarkerJob = scope.launch {
             delay(1000)
             val map = mapRepository.getMap(mapId) ?: return@launch
 
             map.markers.update { formerList ->
-                formerList.filter { it.id != marker.id } + marker
+                formerList.map { m ->
+                    if (m.id == marker.id) marker else m
+                }
             }
 
             markersDao.saveMarkers(map)
@@ -87,6 +104,11 @@ class MarkerInteractor @Inject constructor(
     fun deleteMarker(marker: Marker, mapId: UUID) = scope.launch {
         val map = mapRepository.getMap(mapId) ?: return@launch
         map.markers.update { it - marker }
+        markersDao.saveMarkers(map)
+    }
+
+    fun deleteMarkers(markerIds: List<String>, map: Map) = scope.launch {
+        map.markers.update { it - it.filter { m -> m.id in markerIds}.toSet() }
         markersDao.saveMarkers(map)
     }
 

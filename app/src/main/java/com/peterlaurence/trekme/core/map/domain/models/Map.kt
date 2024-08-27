@@ -12,16 +12,11 @@ import java.util.UUID
  *  * The calibration method along with calibration points
  *  * Points of interest
  * ...
- *
- * A [Map] is typically created using a [MapConfig] object that includes information relative to
- * levels, the tile size, the name of the map, etc. This configuration is later accessible through
- * the [configSnapshot] property.
  */
 interface Map {
     val id: UUID
-    val name: String
-    val thumbnailImage: Bitmap?
-    val thumbnailSize: Int
+    val name: MutableStateFlow<String>
+    val thumbnail: MutableStateFlow<Bitmap?>
     val mapBounds: MapBounds
     val markers: MutableStateFlow<List<Marker>>
     val landmarks: MutableStateFlow<List<Landmark>>
@@ -41,7 +36,9 @@ interface Map {
     val imageExtension: String
     val widthPx: Int
     val heightPx: Int
-
-    val configSnapshot: MapConfig
-    fun copy(config: MapConfig): Map
+    val creationData: CreationData?
+    val missingTilesCount: MutableStateFlow<Long?> // lazy loaded
+    val lastRepairDate: MutableStateFlow<Long?>
+    val lastUpdateDate: MutableStateFlow<Long?>
+    val isDownloadPending: MutableStateFlow<Boolean>
 }

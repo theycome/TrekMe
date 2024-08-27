@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.core.excursion.data.dao
 
 import android.net.Uri
+import com.peterlaurence.trekme.core.common.data.makeGeoJsonUri
 import com.peterlaurence.trekme.core.excursion.data.mapper.toData
 import com.peterlaurence.trekme.core.excursion.data.model.ExcursionConfig
 import com.peterlaurence.trekme.core.excursion.data.model.ExcursionFileBased
@@ -12,8 +13,12 @@ import com.peterlaurence.trekme.core.excursion.domain.model.ExcursionType
 import com.peterlaurence.trekme.core.excursion.domain.model.ExcursionWaypoint
 import com.peterlaurence.trekme.core.georecord.app.TrekmeFilesProvider
 import com.peterlaurence.trekme.core.georecord.data.mapper.gpxToDomain
+import com.peterlaurence.trekme.core.georecord.data.mapper.toGeoJson
 import com.peterlaurence.trekme.core.georecord.data.mapper.toGpx
 import com.peterlaurence.trekme.core.georecord.domain.model.GeoRecord
+import com.peterlaurence.trekme.core.georecord.domain.model.GeoRecordExportFormat
+import com.peterlaurence.trekme.core.lib.geojson.GEOJSON_FILE_EXT
+import com.peterlaurence.trekme.core.lib.geojson.GeoJsonWriter
 import com.peterlaurence.trekme.core.lib.gpx.parseGpxSafely
 import com.peterlaurence.trekme.core.lib.gpx.writeGpx
 import com.peterlaurence.trekme.util.FileUtils
@@ -42,12 +47,14 @@ class ExcursionDaoFileBased(
     private val appDirFlow: Flow<File>,
     private val uriReader: suspend (uri: Uri, reader: suspend (FileInputStream) -> Excursion?) -> Excursion?,
     private val nameReaderUri: (Uri) -> String?,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val cacheDir: File?
 ) : ExcursionDao {
     private val excursions = MutableStateFlow<List<ExcursionFileBased>>(emptyList())
     private val json = Json { isLenient = true; ignoreUnknownKeys = true }
     private val hasInit = AtomicBoolean(false)
     private val initTask = CompletableDeferred<Boolean>()
+    private val geoJsonWriter = GeoJsonWriter()
 
     private suspend fun loadExcursions() {
         val folders = rootFolders.first { it.isNotEmpty() }
@@ -139,10 +146,14 @@ class ExcursionDaoFileBased(
         val wpt = waypoint as? Waypoint ?: return@withContext
 
         excursion.waypointsFlow.update {
-            it.filterNot { p -> p.id == waypoint.id } + wpt.copy(
-                latitude = newLat,
-                longitude = newLon
-            )
+            it.map { p ->
+                if (p.id == waypoint.id) {
+                    wpt.copy(
+                        latitude = newLat,
+                        longitude = newLon
+                    )
+                } else p
+            }
         }
 
         /* Re-write the waypoints file */
@@ -156,25 +167,50 @@ class ExcursionDaoFileBased(
         name: String?,
         lat: Double?,
         lon: Double?,
-        comment: String?
+        comment: String?,
+        color: String?
     ) = withContext(ioDispatcher) {
         val root = (excursion as? ExcursionFileBased)?.root ?: return@withContext
         val wpt = waypoint as? Waypoint ?: return@withContext
 
-//        println("xxxxx updating flow ${excursion.waypointsFlow}")
         excursion.waypointsFlow.update {
-            it.filterNot { p -> p.id == waypoint.id } +
+            it.map { p ->
+                if (p.id == waypoint.id) {
                     wpt.copy(
                         name = name ?: wpt.name,
                         latitude = lat ?: wpt.latitude,
                         longitude = lon ?: wpt.longitude,
-                        comment = comment ?: wpt.comment
+                        comment = comment ?: wpt.comment,
+                        color = color  // no default on purpose
                     )
+                } else p
+            }
         }
 
         /* Re-write the waypoints file */
         val wayPointsFile = File(root, WAYPOINTS_FILENAME)
         FileUtils.writeToFile(json.encodeToString(excursion.waypointsFlow.value), wayPointsFile)
+    }
+
+    override suspend fun updateWaypointsColor(
+        excursion: Excursion,
+        waypoints: List<ExcursionWaypoint>,
+        color: String?
+    ) {
+        withContext(ioDispatcher) {
+            val root = (excursion as? ExcursionFileBased)?.root ?: return@withContext
+            val ids = waypoints.map { it.id }
+
+            excursion.waypointsFlow.update { wpts ->
+                wpts.map {
+                    if (it.id in ids) it.copy(color = color) else it
+                }
+            }
+
+            /* Re-write the waypoints file */
+            val wayPointsFile = File(root, WAYPOINTS_FILENAME)
+            FileUtils.writeToFile(json.encodeToString(excursion.waypointsFlow.value), wayPointsFile)
+        }
     }
 
     override suspend fun deleteWaypoint(
@@ -184,6 +220,22 @@ class ExcursionDaoFileBased(
 
         excursion.waypointsFlow.update {
             it.filterNot { p -> p.id == waypoint.id }
+        }
+
+        /* Re-write the waypoints file */
+        val wayPointsFile = File(root, WAYPOINTS_FILENAME)
+        FileUtils.writeToFile(json.encodeToString(excursion.waypointsFlow.value), wayPointsFile)
+    }
+
+    override suspend fun deleteWaypoints(
+        excursion: Excursion,
+        waypoints: List<ExcursionWaypoint>
+    ) = withContext(ioDispatcher) {
+        val root = (excursion as? ExcursionFileBased)?.root ?: return@withContext
+        val ids = waypoints.map { it.id }
+
+        excursion.waypointsFlow.update {
+            it.filterNot { p -> p.id in ids }
         }
 
         /* Re-write the waypoints file */
@@ -203,13 +255,23 @@ class ExcursionDaoFileBased(
         return parseGpxFile(file)
     }
 
-    override fun getGeoRecordUri(id: String): Uri? {
+    override suspend fun getGeoRecordUri(id: String, format: GeoRecordExportFormat): Uri? {
         val excursion = excursions.value.firstOrNull {
             it.id == id
         } ?: return null
 
         val file = excursion.root.getGpxFile() ?: return null
-        return TrekmeFilesProvider.generateUri(file)
+        return when (format) {
+            GeoRecordExportFormat.Gpx -> TrekmeFilesProvider.generateUri(file)
+            GeoRecordExportFormat.GeoJson -> {
+                val cacheDir = this.cacheDir ?: return null
+                val geoRecord = parseGpxFile(file) ?: return null
+                val geoJson = withContext(Dispatchers.Default) {
+                    geoRecord.toGeoJson()
+                }
+                makeGeoJsonUri(geoJson, cacheDir, destFileName = "track-${id.substringAfterLast('-')}.$GEOJSON_FILE_EXT", geoJsonWriter)
+            }
+        }
     }
 
     override suspend fun putExcursion(id: String, uri: Uri): Excursion? {

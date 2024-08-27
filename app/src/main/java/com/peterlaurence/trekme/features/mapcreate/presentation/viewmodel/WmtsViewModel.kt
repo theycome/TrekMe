@@ -28,12 +28,9 @@ import com.peterlaurence.trekme.core.wmts.domain.dao.TileStreamProviderDao
 import com.peterlaurence.trekme.core.wmts.domain.model.*
 import com.peterlaurence.trekme.features.mapcreate.domain.repository.LayerOverlayRepository
 import com.peterlaurence.trekme.core.wmts.domain.model.LayerProperties
-import com.peterlaurence.trekme.core.wmts.domain.tools.getMapSpec
-import com.peterlaurence.trekme.core.wmts.domain.tools.getNumberOfTiles
 import com.peterlaurence.trekme.features.mapcreate.domain.repository.WmtsSourceRepository
 import com.peterlaurence.trekme.features.common.presentation.ui.widgets.PositionMarker
 import com.peterlaurence.trekme.features.mapcreate.presentation.ui.wmts.model.DownloadFormData
-import com.peterlaurence.trekme.features.mapcreate.presentation.ui.wmts.WmtsFragment
 import com.peterlaurence.trekme.features.mapcreate.presentation.ui.wmts.components.AreaUiController
 import com.peterlaurence.trekme.features.common.presentation.ui.component.PlaceMarker
 import com.peterlaurence.trekme.features.common.domain.util.toMapComposeTileStreamProvider
@@ -51,12 +48,14 @@ import com.peterlaurence.trekme.features.common.presentation.ui.mapcompose.swiss
 import com.peterlaurence.trekme.features.common.presentation.ui.mapcompose.usgsConfig
 import com.peterlaurence.trekme.features.mapcreate.domain.interactors.ParseGeoRecordInteractor
 import com.peterlaurence.trekme.core.map.domain.interactors.Wgs84ToMercatorInteractor
+import com.peterlaurence.trekme.core.wmts.domain.tools.getNumberOfTiles
 import com.peterlaurence.trekme.features.common.presentation.ui.mapcompose.osmHdConfig
 import com.peterlaurence.trekme.features.mapcreate.presentation.ui.wmts.model.toDomain
 import com.peterlaurence.trekme.features.mapcreate.presentation.ui.wmts.model.toModel
 import com.peterlaurence.trekme.features.mapcreate.presentation.viewmodel.layers.RouteLayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import ovh.plrapps.mapcompose.api.*
@@ -66,7 +65,7 @@ import ovh.plrapps.mapcompose.ui.state.MapState
 import javax.inject.Inject
 
 /**
- * View-model for [WmtsFragment]. It takes care of:
+ * View-model for the map creation screen. It takes care of:
  * * storing the predefined init scale and position for each [WmtsSource]
  * * keeping track of the layer (as to each [WmtsSource] may correspond multiple layers)
  * * exposes [UiState] and [TopBarState] for the view made mostly in Compose
@@ -102,11 +101,16 @@ class WmtsViewModel @Inject constructor(
     val wmtsSourceState = wmtsSourceRepository.wmtsSourceState
     val locationFlow = locationSource.locationFlow
 
+    /* Allow the "view" to collect those events only at some lifecycle stages, in order to avoid
+     * unnecessary network requests when e.g changing overlay layers from a different screen. */
+    private val _tileStreamProviderChannel = Channel<TileStreamProvider>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val tileStreamProviderFlow = _tileStreamProviderChannel.receiveAsFlow()
+
     private val _eventsChannel = Channel<WmtsEvent>(1)
     val events = _eventsChannel.receiveAsFlow()
 
-    private val defaultIgnLayer: IgnLayer = IgnClassic
-    private val defaultOsmLayer: OsmLayer = WorldStreetMap
+    private val defaultIgnLayer = IgnClassic
+    private val defaultOsmLayer = WorldStreetMap
 
     private val areaController = AreaUiController()
     private var downloadFormData: DownloadFormData? = null
@@ -122,12 +126,11 @@ class WmtsViewModel @Inject constructor(
     private val routeLayer = RouteLayer(viewModelScope, wgs84ToMercatorInteractor)
     private val geoRecordUrls = mutableSetOf<Uri>()
 
-    private val activePrimaryLayerForSource: MutableMap<WmtsSource, Layer> = mutableMapOf(
-        WmtsSource.IGN to defaultIgnLayer,
-        WmtsSource.OPEN_STREET_MAP to defaultOsmLayer
-    )
+    private val activePrimaryLayerForSource = mutableMapOf<WmtsSource, Layer>()
 
-    private var shouldCenterOnNextLocation = false
+    /* While awaiting the first location, and if the user hasn't panned or zoomed the map, let this
+     * flag to true. */
+    private var shouldCenterOnNextLocation = true
 
     init {
         viewModelScope.launch {
@@ -154,7 +157,7 @@ class WmtsViewModel @Inject constructor(
                     areaController.detach(st.mapState)
                     MapReady(st.mapState)
                 }
-                Loading, is WmtsError -> null
+                is Loading, is WmtsError -> null
                 is MapReady -> {
                     areaController.attachAndInit(st.mapState)
                     AreaSelection(st.mapState, areaController)
@@ -257,6 +260,10 @@ class WmtsViewModel @Inject constructor(
             }
         }
 
+        mapState.onFirstMove(this) {
+            shouldCenterOnNextLocation = false
+        }
+
         /* The top bar configuration depends on the wmtsSource */
         updateTopBarConfig(wmtsSource)
 
@@ -279,12 +286,42 @@ class WmtsViewModel @Inject constructor(
         tileStreamProviderFlow.collect { (_, result) ->
             val tileStreamProvider = result.getOrNull()
             if (tileStreamProvider != null) {
-                mapState.removeAllLayers()
-                mapState.addLayer(tileStreamProvider.toMapComposeTileStreamProvider())
+                _tileStreamProviderChannel.send(tileStreamProvider)
             } else {
                 _wmtsState.value = WmtsError.VPS_FAIL
             }
         }
+    }
+
+    /**
+     * Executes [block] action once, when the map was detected idle for the first time and after
+     * the first move.
+     */
+    private fun MapState.onFirstMove(scope: CoroutineScope, block: () -> Unit) {
+        scope.launch {
+            var idleOnce = false
+            idleStateFlow().collect { idle ->
+                if (idle) {
+                    idleOnce = true
+                } else {
+                    if (idleOnce) {
+                        block()
+                        cancel()
+                    }
+                }
+            }
+        }
+    }
+
+    fun onNewTileStreamProvider(tileStreamProvider: TileStreamProvider) {
+        val mapState = _wmtsState.value.let { if (it is MapReady) it.mapState else null} ?: return
+
+        mapState.removeAllLayers()
+        mapState.addLayer(
+            /* The retry policy is applied here to affect map display only, and to not
+             * cumulate with the retry policy already applied when downloading maps. */
+            tileStreamProvider.withRetry(3).toMapComposeTileStreamProvider()
+        )
     }
 
     private fun getTileSize(wmtsSource: WmtsSource): Int {
@@ -323,7 +360,12 @@ class WmtsViewModel @Inject constructor(
     fun getAvailablePrimaryLayersForSource(wmtsSource: WmtsSource): List<Layer>? {
         return when (wmtsSource) {
             WmtsSource.IGN -> ignLayersPrimary
-            WmtsSource.OPEN_STREET_MAP -> osmLayersPrimary
+            WmtsSource.OPEN_STREET_MAP -> osmLayersPrimary.let {
+                /* If extended offer, osm hd first */
+                if (hasExtendedOffer.value) {
+                    it.sortedByDescending { l -> l == OsmAndHd }
+                } else it
+            }
             else -> null
         }
     }
@@ -339,12 +381,12 @@ class WmtsViewModel @Inject constructor(
         }
     }
 
-    private fun getActivePrimaryIgnLayer(): IgnLayer {
-        return activePrimaryLayerForSource[WmtsSource.IGN] as? IgnLayer ?: defaultIgnLayer
+    private fun getActivePrimaryIgnLayer(): IgnPrimaryLayer {
+        return activePrimaryLayerForSource[WmtsSource.IGN] as? IgnPrimaryLayer ?: defaultIgnLayer
     }
 
-    private fun getActivePrimaryOsmLayer(): OsmLayer {
-        return activePrimaryLayerForSource[WmtsSource.OPEN_STREET_MAP] as? OsmLayer ?: run {
+    private fun getActivePrimaryOsmLayer(): OsmPrimaryLayer {
+        return activePrimaryLayerForSource[WmtsSource.OPEN_STREET_MAP] as? OsmPrimaryLayer ?: run {
             if (hasExtendedOffer.value) OsmAndHd else defaultOsmLayer
         }
     }
@@ -397,7 +439,21 @@ class WmtsViewModel @Inject constructor(
     }
 
     private suspend fun createTileStreamProvider(wmtsSource: WmtsSource): Flow<Pair<MapSourceData, Result<TileStreamProvider>>> {
-        val mapSourceData: Flow<MapSourceData> = when (wmtsSource) {
+        val mapSourceDataFlow: Flow<MapSourceData> = getMapSourceDataFlow(wmtsSource)
+
+        return mapSourceDataFlow.map {
+            Pair(it, getTileStreamProviderDao.newTileStreamProvider(it)).also { (_, result) ->
+                /* Don't test the stream provider if it has overlays */
+                val provider = result.getOrNull()
+                if (provider != null && provider !is TileStreamProviderOverlay) {
+                    checkTileAccessibility(wmtsSource, provider)
+                }
+            }
+        }
+    }
+
+    private suspend fun getMapSourceDataFlow(wmtsSource: WmtsSource): Flow<MapSourceData> {
+        return when (wmtsSource) {
             WmtsSource.IGN -> {
                 val layer = getActivePrimaryIgnLayer()
                 getOverlayLayersForSource(wmtsSource).map { overlays ->
@@ -415,16 +471,6 @@ class WmtsViewModel @Inject constructor(
             WmtsSource.SWISS_TOPO -> flow { emit(SwissTopoData) }
             WmtsSource.USGS -> flow { emit(UsgsData) }
             WmtsSource.IGN_SPAIN -> flow { emit(IgnSpainData) }
-        }
-
-        return mapSourceData.map {
-            Pair(it, getTileStreamProviderDao.newTileStreamProvider(it)).also { (_, result) ->
-                /* Don't test the stream provider if it has overlays */
-                val provider = result.getOrNull()
-                if (provider != null && provider !is TileStreamProviderOverlay) {
-                    checkTileAccessibility(wmtsSource, provider)
-                }
-            }
         }
     }
 
@@ -463,26 +509,23 @@ class WmtsViewModel @Inject constructor(
             ).toModel()
         }
 
+        val tilesNumberLimit = if (hasExtendedOffer.value) null else tileNumberLimit
         val mapSourceBundle = if (levelConf != null) {
-            if (startMaxLevel != null) {
-                DownloadFormData(
-                    wmtsSource,
-                    p1,
-                    p2,
-                    levelConf.levelMin,
-                    levelConf.levelMax,
-                    startMaxLevel
-                )
-            } else {
-                DownloadFormData(wmtsSource, p1, p2, levelConf.levelMin, levelConf.levelMax)
-            }
+            DownloadFormData(
+                wmtsSource = wmtsSource,
+                p1 = p1,
+                p2 = p2,
+                levelMin = levelConf.levelMin,
+                levelMax = levelConf.levelMax,
+                startMaxLevel = startMaxLevel ?: 16,
+                tilesNumberLimit = tilesNumberLimit
+            )
         } else {
-            DownloadFormData(wmtsSource, p1, p2)
+            DownloadFormData(wmtsSource, p1, p2, tilesNumberLimit = tilesNumberLimit)
         }
 
-        return mapSourceBundle.also {
-            downloadFormData = it
-        }
+        downloadFormData = mapSourceBundle
+        return mapSourceBundle
     }
 
     /**
@@ -490,23 +533,50 @@ class WmtsViewModel @Inject constructor(
      * relevant repository before the service is started.
      * The service then process the request when it starts.
      */
-    fun onDownloadFormConfirmed(minLevel: Int, maxLevel: Int) {
-        val downloadForm = downloadFormData ?: return
+    fun onDownloadFormConfirmed(minLevel: Int, maxLevel: Int): Boolean {
+        val downloadForm = downloadFormData ?: return true // download not launched, but ui should proceed as if it was.
         val (wmtsSource, p1, p2) = downloadForm
 
+        /* If there's a limit on the number of tiles.
+         * If purchase was made meanwhile, don't do this. */
+        if (downloadForm.tilesNumberLimit != null && !hasExtendedOffer.value) {
+            /* ..double-check the number of tiles */
+            val tilesNumber = computeTilesNumber(minLevel, maxLevel, p1.toDomain(), p2.toDomain())
+            if (tilesNumber > tileNumberLimit) {
+                viewModelScope.launch {
+                    _eventsChannel.send(WmtsEvent.SHOW_MAP_SIZE_LIMIT_RATIONALE)
+                }
+                /* Notify caller that download was blocked */
+                return false
+            }
+        }
+
         val tileSize = getTileSize(wmtsSource)
-        val mapSpec = getMapSpec(minLevel, maxLevel, p1.toDomain(), p2.toDomain(), tileSize = tileSize)
-        val tileCount = getNumberOfTiles(minLevel, maxLevel, p1.toDomain(), p2.toDomain())
         viewModelScope.launch {
-            val tileStreamAndMapSource = createTileStreamProvider(
-                wmtsSource
-            ).firstOrNull()
-            val tileStreamProvider = tileStreamAndMapSource?.second?.getOrNull() ?: return@launch
-            val request = DownloadMapRequest(tileStreamAndMapSource.first, mapSpec, tileCount, tileStreamProvider, geoRecordUrls)
-            downloadRepository.postDownloadMapRequest(request)
+            val mapSourceData = getMapSourceDataFlow(wmtsSource).firstOrNull() ?: return@launch
+            val downloadSpec = NewDownloadSpec(
+                corner1 = p1.toDomain(),
+                corner2 = p2.toDomain(),
+                minLevel = minLevel,
+                maxLevel = maxLevel,
+                tileSize = tileSize,
+                source = mapSourceData,
+                geoRecordUris = geoRecordUrls
+            )
+            downloadRepository.postMapDownloadSpec(downloadSpec)
             val intent = Intent(app, DownloadService::class.java)
             app.startService(intent)
         }
+        return true
+    }
+
+    fun computeTilesNumber(minLevel: Int, maxLevel: Int, p1: Point, p2: Point): Long {
+        return getNumberOfTiles(
+            levelMin = minLevel,
+            levelMax = maxLevel,
+            point1 = p1,
+            point2 = p2
+        )
     }
 
     /**
@@ -682,7 +752,11 @@ fun List<BoundingBox>.contains(latitude: Double, longitude: Double): Boolean {
 }
 
 enum class WmtsEvent {
-    CURRENT_LOCATION_OUT_OF_BOUNDS, PLACE_OUT_OF_BOUNDS, AWAITING_LOCATION, SHOW_TREKME_EXTENDED_ADVERT
+    CURRENT_LOCATION_OUT_OF_BOUNDS,
+    PLACE_OUT_OF_BOUNDS,
+    AWAITING_LOCATION,
+    SHOW_TREKME_EXTENDED_ADVERT,
+    SHOW_MAP_SIZE_LIMIT_RATIONALE
 }
 
 sealed interface UiState
@@ -690,7 +764,7 @@ data class Wmts(val wmtsState: WmtsState) : UiState
 data class GeoplaceList(val geoPlaceList: List<GeoPlace>) : UiState
 
 sealed interface WmtsState
-object Loading : WmtsState
+data object Loading : WmtsState
 data class MapReady(val mapState: MapState) : WmtsState
 data class AreaSelection(val mapState: MapState, val areaUiController: AreaUiController) : WmtsState
 enum class WmtsError : WmtsState {
@@ -700,14 +774,12 @@ enum class WmtsError : WmtsState {
 private fun WmtsState.getMapState(): MapState? {
     return when (this) {
         is AreaSelection -> mapState
-        Loading, is WmtsError -> null
+        is Loading, is WmtsError -> null
         is MapReady -> mapState
     }
 }
 
 sealed interface TopBarState
-object Empty : TopBarState
-data class Collapsed(val hasPrimaryLayers: Boolean, val hasOverlayLayers: Boolean, val hasTrackImport: Boolean) : TopBarState {
-    val hasOverflowMenu: Boolean = hasOverlayLayers || hasTrackImport
-}
+data object Empty : TopBarState
+data class Collapsed(val hasPrimaryLayers: Boolean, val hasOverlayLayers: Boolean, val hasTrackImport: Boolean) : TopBarState
 data class SearchMode(val textValueState: MutableState<TextFieldValue>) : TopBarState

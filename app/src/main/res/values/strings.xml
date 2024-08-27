@@ -18,11 +18,15 @@
     <string name="shop_menu_title">Shop</string>
     <string name="about">About</string>
     <string name="help_url">https://github.com/p-lr/TrekMe/blob/master/Readme.md#summary</string>
+    <string name="link_error">The link cannot be opened :/</string>
     <string name="confirm_exit">Click BACK again to exit</string>
     <string name="no_internet">You must be connected to internet to create a map</string>
     <string name="no_storage_perm">TrekMe absolutely needs internal storage access, because it stores maps and other data there. Don\'t worry, it will never attempt to access your private data.\n\nYou can give TrekMe this permission in your Android settings, in Applications > TrekMe.</string>
+    <string name="no_location_perm">Without the location permission, most core features of TrekMe won\'t work. Please grant the permission in the app settings.</string>
+    <string name="error_title">Error</string>
     <string name="warning_title">Warning</string>
     <string name="solution_title">Solution</string>
+    <string name="init_error">TrekMe can\'t create necessary folders, and cannot function properly. If this error persists, consider re-installing the app.</string>
     <string name="bad_storage_status">There is something wrong with your SD card: we can\'t write to it.\nThis has nothing to do with TrekMe, and it won\'t be able to download maps or save changes.</string>
     <string name="storage_read_only">Your SD card is only accessible as read-only. This means we can\'t write to it and TrekMe won\'t be able to download maps or save changes.</string>
     <string name="storage_perm_denied">Please enable storage permission from settings</string>
@@ -31,6 +35,7 @@
     <string name="start_dialog_string">Start</string>
     <string name="understood_dialog">I understand</string>
     <string name="new_text">new</string>
+    <string name="settings_show_advanced">Show advanced settings</string>
 
     <!-- Map Creation -->
     <string name="onboarding_map_create">Select a map source.</string>
@@ -47,14 +52,21 @@
     <string name="service_gpx_record_action">GPX recording</string>
     <string name="service_gpx_location_error">Error while requesting your location :(</string>
     <string name="service_gpx_error">Error while saving the GPX file :(</string>
+    <string name="requires_location_permission_recording">The \"Allow all the time\" location permission is required to start a recording.</string>
 
     <!-- DownloadService -->
     <string name="service_download_name">Download service</string>
     <string name="service_download_action">Map download</string>
+    <string name="service_repair_action">Map repair</string>
+    <string name="service_update_action">Map update</string>
     <string name="service_download_finished">Map download finished</string>
+    <string name="service_repair_finished">Map repair finished</string>
+    <string name="service_update_finished">Map update finished</string>
     <string name="service_download_stop">Stop</string>
     <string name="service_download_bad_storage">TrekMe can\'t write to your internal storage or your SD card. It can be a permission issue. Please check that all permissions of TrekMe are granted, and reboot your phone, if necessary.</string>
     <string name="service_download_already_running">A download is already pending. Please wait for the current download to complete before starting a new one.</string>
+    <string name="service_download_missing_api">An unexpected api missing error occurred. Please update TrekMe.</string>
+    <string name="service_download_repair_error">This map is not repairable.</string>
 
     <!-- WifiP2pService -->
     <string name="service_wifip2p_name">Map sharing service</string>
@@ -64,18 +76,20 @@
     <string name="service_beacon_name">Beacon service</string>
     <string name="service_beacon_notification_name">Beacon monitoring</string>
     <string name="service_beacon_stop">Stop</string>
+    <string name="requires_location_permission_beacon">The \"Allow all the time\" location permission is required use beacons.</string>
 
     <!-- TrackFollowService -->
     <string name="service_track_follow_name">Track follow service</string>
     <string name="service_track_follow_notification_name">Track follow monitoring</string>
     <string name="service_track_follow_stop">Stop</string>
+    <string name="requires_location_permission_track_follow">The \"Allow all the time\" location permission is required to follow a track.</string>
 
     <!-- MapDownloadDialog -->
     <string name="map_download_dialog_title">Current map download</string>
     <string name="map_download_dialog_progress">Progress</string>
     <string name="map_download_dialog_error">An error occurred during map import. The map is most probably not visible or not calibrated.\nTry to download it again.</string>
 
-    <!-- Map list fragment -->
+    <!-- Map list -->
     <string name="fragment_map_list" translatable="false">MapListFragment</string>
     <string name="loading_maps">Loading maps…</string>
     <string name="download_pending_item">Download in progress</string>
@@ -86,6 +100,7 @@
     <string name="welcome_excursion_search">Search for excursions</string>
     <string name="ok_dialog">Ok</string>
     <string name="no_dialog">No</string>
+    <string name="open_dialog">Open</string>
     <string name="no_authorize_dialog">Don\'t authorize</string>
     <string name="delete_dialog">Delete</string>
     <string name="map_manage_btn_string">Edit</string>
@@ -94,15 +109,31 @@
     <string name="map_delete_question">Are you sure to delete this map?</string>
     <string name="choose_map_thumbnail">You can choose a thumbnail image to illustrate your map, it\'ll be prettier!\nContinue?</string>
     <string name="show_map_action">Show</string>
+    <string name="download_aborted_warning">Download aborted</string>
+    <string name="download_aborted_explanation">The download of the map was aborted. Consequently, the map is incomplete.\nPlease perform a \"%1$s\" for this map.</string>
 
     <!-- Map Settings fragment -->
     <string name="fragment_settings" translatable="false">SettingsFragment</string>
-    <string name="map_settings_show_advanced">Show advanced settings</string>
     <string name="map_settings_hide_advanced">Hide advanced settings</string>
     <string name="map_settings_frgmt_title">Map settings</string>
     <string name="map_image_import_ok">Image set successfully</string>
     <string name="map_image_import_error">Error while changing the image :(</string>
     <string name="map_settings_error">Sorry, something went wrong</string>
+    <string name="map_settings_trekme_extended_title">TrekMe Extended required</string>
+    <string name="map_update_category">Repair and update</string>
+    <string name="map_analyze_and_repair">Analyze &amp; repair</string>
+    <string name="map_analyze_and_repair_progress">Repair in progress</string>
+    <string name="map_repair_rationale">This feature allows you to download missing tiles. This feature is only available with TrekMe Extended and for maps created with TrekMe v4 and onwards.</string>
+    <string name="map_no_missing_tile">Map complete</string>
+    <string name="map_missing_tiles">Missing tiles: %1$s</string>
+    <string name="map_update">Update</string>
+    <string name="map_update_progress">Update in progress</string>
+    <string name="map_repair_rationale_subscribed_user">This feature allows you to download missing tiles, if any. It\'s useful after a downloading a map using an unstable connection, or after receiving a map using the map sharing feature.</string>
+    <string name="map_update_rationale">This feature allows you to re-download completely the map. It\'s useful when the map was created years ago and some parts are likely to have changed.</string>
+    <string name="map_update_action">Update</string>
+    <string name="map_repair_action">Repair</string>
+    <string name="map_created_on">Map created on %1$s</string>
+    <string name="map_updated_on">Last updated on %1$s</string>
 
     <!-- Save map dialog fragment -->
     <string name="archive_dialog_title">Save map</string>
@@ -110,6 +141,7 @@
         the destination folder of that archive. Later, you can restore a map from an archive using the
         import menu.\n\nThe progress will appear in a notification.</string>
     <string name="archive_snackbar_finished">Map successfully archived</string>
+    <string name="archive_snackbar_error">Error while archiving the map</string>
     <string name="archive_notification_title">Archiving</string>
     <string name="archive_notification_msg" formatted="false">Saving the map %s in progress</string>
 
@@ -158,6 +190,7 @@
     <string name="latitude_short">Lat</string>
     <string name="longitude_short">Lng</string>
     <string name="elevation_short">Ele</string>.
+    <string name="distance_short">Dst</string>
     <string name="update_short">Δt\ </string>
     <string name="projected_x_short">E</string>
     <string name="projected_y_short">N</string>
@@ -171,8 +204,7 @@
     <string name="import_folder_select_btn">Select archives folder</string>
     <string name="extraction_lbl">Extraction</string>
     <string name="map_created_lbl">Map creation</string>
-    <string name="imported_new_map">Imported and created a new map</string>
-    <string name="imported_untouched">Imported without modification</string>
+    <string name="map_import_success">Map successfully imported</string>
     <string name="extraction_error">Extraction error</string>
     <string name="snack_msg_show_map_list">Show map list?</string>
     <string name="confirm_import">You can now import the map</string>
@@ -180,11 +212,12 @@
     <string name="map_import_error">Error: the map format is\'t recognized.</string>
     <string name="import_from_folder_btn_desc" translatable="false">Import from folder button</string>
 
-    <!-- Menu of the map view fragment -->
+    <!-- Menu of the map top app bar -->
     <string name="manage_tracks_menu">Manage tracks</string>
     <string name="follow_track_menu">Follow a track</string>
+    <string name="manage_markers_menu">Manage markers</string>
 
-    <!-- Tracks manage fragment -->
+    <!-- Tracks manage -->
     <string name="tracks_manage_frgmt_title">Tracks manage</string>
     <string name="import_tracks_menu_title">Tracks</string>
     <string name="import_tracks_action_settings">Settings</string>
@@ -196,6 +229,7 @@
     <string name="go_to_track_on_map">See on the map</string>
     <string name="track_file_name_change">File name</string>
     <string name="import_result_recap">Import result\n  Routes: %s \n  Waypoints: %s</string>
+    <string name="import_result_out_of_bounds">This track is out of the bounds of this map.</string>
     <string name="gpx_import_error_msg">Oops.. something went wrong during the import</string>
     <string name="track_visibility_btn">Track visibility</string>
     <string name="track_color_btn">Track color</string>
@@ -207,6 +241,17 @@
     <string name="color_variant_dark">Dark</string>
     <string name="add_track_btn_desc" translatable="false">Add track button</string>
     <string name="track_remove_question">Confirm track removal</string>
+
+    <!-- Markers manage -->
+    <string name="markers_manage_title">Markers manage</string>
+    <string name="markers_manage_no_name">without name</string>
+    <string name="markers_manage_edit">Edit</string>
+    <string name="markers_manage_select">Select</string>
+    <string name="markers_manage_goto">See on map</string>
+    <string name="markers_manage_select_all">Select all</string>
+    <string name="markers_manage_deselect_all">Select all</string>
+    <string name="markers_manage_change_color">Change color</string>
+    <string name="markers_manage_delete">Delete</string>
 
     <!-- Map feature -->
     <string name="mapview_show_speed">Show speed</string>
@@ -234,6 +279,7 @@
     <string name="mile">ml</string>
     <string name="no_track_message">You haven\'t created nor imported any track yet.
         You can import a gpx track downloaded from a website (or a recording of your own) using the import button below.</string>
+    <string name="no_markers_message">There\'s no markers on this map.</string>
     <string name="missing_extended_with_ign">To open this map, your TrekMe Extended subscription with IGN option must be active.</string>
     <string name="missing_extended">To open this map, your TrekMe Extended subscription must be active.</string>
     <string name="empty_map">This map appears to be empty</string>
@@ -246,20 +292,25 @@
     <string name="elevation_fix_name">Fix</string>
     <string name="elevation_fix_help">The fix value is added to the elevation from the GPS</string>
     <string name="beacon_background_loc_perm">This map has at least one beacon. As a result, the app needs to collect location data even when the app is closed or not in use.\n\nCurrently, the <b>authorization isn\'t granted</b>.</string>
+    <string name="beacon_background_loc_perm_failure">Beacons feature isn\'t started because the location permission is not set as "Allow all the time". Please grant the permission and restart the app.</string>
     <string name="select_track_to_follow">Press on the track to follow</string>
     <string name="track_follow_already_running">The track-follow service is already running. Do you want to stop it?</string>
-    <string name="track_follow_help">When following a track, your distance to the track is checked and if you move more than (say) 50m away from the track, you get notified with a sound and vibration.\n\nThe
+    <string name="track_follow_help">When following a track, your distance to the track is checked and if you move away from the track, you get notified with a sound and vibration.\n\nThe
         alert threshold can be changed in the settings.
     </string>
+    <string name="manage_markers_help">Search for markers, multi select them for color change or deletion…</string>
     <string name="itinerary_error">Sorry, no itinerary app found</string>
-    <!-- Marker, landmark, beacon edit screens -->
+    <!-- Marker, beacon edit screens -->
     <string name="marker_edit_screen_title">Marker edit</string>
     <string name="beacon_edit_screen_title">Beacon edit</string>
     <string name="marker_name_label">Name</string>
+    <string name="use_same_color_as_track">Use same color as track</string>
     <string name="beacon_setting_title">Beacon extent</string>
     <string name="beacon_radius_label">Radius</string>
     <string name="beacon_unit_label">Unit</string>
     <string name="wgs84_label">WGS84 coordinates</string>
+    <string name="color_label">Color</string>
+    <string name="change_color">Change color</string>
     <string name="projection_label">Projected coordinates</string>
     <string name="comment_label">Comment</string>
     <string name="save_action">Save</string>
@@ -303,9 +354,11 @@
     <string name="background_location_rationale_gpx_recording">TrekMe collects location data during the GPX recording,
         even when the app is closed or not in use. In order to do that, the location permission must be set to "allow all the time" or equivalent.\n\nThis location data <b>isn\'t shared with anyone</b>,
         and gpx files are stored locally on your device.</string>
+    <string name="background_location_gpx_recording_failure">The GPX recording feature can only work when the location permission is set to "Allow all the time". Please grant the permission in the app settings.</string>
     <string name="background_location_rationale_track_follow">In order to regularly check your distance to the followed track, TrekMe needs to collect location data in the background,
         even when the app is closed or not in use. In order to do that, the location permission must be set to "allow all the time" or equivalent.\n\nThis location data <b>isn\'t shared with anyone</b>.
     </string>
+    <string name="background_location_track_follow_failure">The track follow feature can only work when the location permission is set to "Allow all the time". Please grant the permission in the app settings.</string>
     <string name="recording_imported_success">Successfully imported in %1$d files</string>
     <string name="recording_imported_failure">Couldn\'t import %1$s</string>
     <string name="recording_edit_name_desc">Edit recording name</string>
@@ -326,7 +379,7 @@
 
     <!-- Elevation fragment -->
     <string name="no_elevations">This GPX file contains no elevations. TrekMe can\'t show the elevation profile.</string>
-    <string name="no_ele_profile_data">This GPX is either empty of an error occurred.</string>
+    <string name="no_ele_profile_data">This GPX is either empty or an error occurred.</string>
     <string name="network_required">You must be online to continue, as this feature uses a web service to check for elevations.</string>
     <string name="elevation_service_down">The elevation service is temporarily unavailable :(</string>
     <string name="elevation_correction_error">TrekMe couldn\'t check elevations for this track. The service might be temporarily unavailable, or the area isn\'t covered.</string>
@@ -373,6 +426,7 @@
     <string name="mapcreate_define_layer">Choose layer</string>
     <string name="mapcreate_overlay_layers">Overlay layers</string>
     <string name="mapcreate_from_track">Use a track</string>
+    <string name="mapcreate_from_track_rationale">Use a gpx track to center directly on the right area.</string>
     <string name="wmts_settings_dialog">Map configuration</string>
     <string name="wmts_level_min_decrement">Decrement min level</string>
     <string name="wmts_level_min_increment">Increment min level</string>
@@ -391,6 +445,7 @@
     <string name="buy_btn">Purchase</string>
     <string name="download">Download</string>
     <string name="download_confirm">Download started. See the status in your notifications.</string>
+    <string name="repair_confirm">Map repair started. See the status in your notifications.</string>
     <string name="mapcreate_warning_ign">It looks like there\'s an issue with either IGN servers, which generally solves itself after a few hours.</string>
     <string name="mapcreate_out_of_bounds">Your location is out of supported bounds for this map</string>
     <string name="mapcreate_warning_others">It looks like there\'s a temporary outage of the map provider, which generally solves itself after a few hours.</string>
@@ -412,8 +467,15 @@
     <string name="validate_area">Validate</string>
     <string name="search_hint">Search…</string>
     <string name="trekme_extended_advert">Enjoy far better image quality and more readable texts.</string>
+    <string name="tile_count_text">Download of %1$s tiles</string>
+    <string name="map_size_limit_title">Almost there…</string>
+    <string name="map_size_limit_rationale">Unlock downloads of big maps (e.g with more than %1$d tiles) with TrekMe Extended.
+        \n\nAlso enjoy other advantages such as OpenStreetMap HD, with much better image quality and text readability:
+    </string>
+    <string name="map_size_limit_rationale_2">As a premium user, you also benefit from personal support.</string>
 
     <!-- LayerOverlayFragment -->
+    <string name="overlay_screen_title">Overlays</string>
     <string name="overlay_title">Layer name</string>
     <string name="overlay_opacity">Opacity</string>
     <string name="overlay_empty">No layers added\nUse the button below to add a new layer.</string>
@@ -495,15 +557,22 @@
     <string name="preference_rotate_none">None</string>
     <string name="preference_rotate_free">Free</string>
     <string name="preference_change_scale_when_centering_key" translatable="false">pref_change_scale_when_centering</string>
-    <string name="preference_change_scale_when_centering">Define scale when centering on position</string>
+    <string name="preference_change_scale_when_centering">Define zoom when centering on position</string>
     <string name="preference_show_scale_indicator_key" translatable="false">pref_show_scale_indicator</string>
     <string name="preference_show_scale_indicator">Show scale indicator</string>
     <string name="preference_zoom_when_centered_key" translatable="false">pref_scale_zoom_when_centered</string>
     <string name="preference_zoom_when_centered">Zoom when centered</string>
     <string name="preference_zoom_when_centered_compl">(current: %1$s)</string>
+    <string name="tracks_settings_category">Tracks</string>
+    <string name="track_export_format">Track export format</string>
+    <string name="gpx_format_name" translatable="false">GPX</string>
+    <string name="geojson_format_name" translatable="false">GeoJSON</string>
+    <string name="geojson_disclaimer">to be used by another app</string>
 
     <!-- WifiP2pFragment -->
     <string name="wifip2p_title">Map sharing</string>
+    <string name="wifip2p_explanation">Send or receive a map with another TrekMe user using wifi.\nMake sure you have enabled:</string>
+    <string name="wifip2p_explanation2">• the Wifi\n• the Location</string>
     <string name="wifip2p_stop_btn">Stop</string>
     <string name="wifip2p_rcv_btn">Receive</string>
     <string name="wifip2p_send_btn">Send</string>
@@ -573,20 +642,22 @@
     <string name="trekme_extended_offer" translatable="false">TrekMe Extended</string>
     <string name="trekme_extended_trial">7d of free trial</string>
     <string name="trekme_extended_maps_title">Maps</string>
-    <string name="trekme_extended_osm_hd_desc">Download OSM HD maps, with a twice better resolution than standard and better readable texts</string>
+    <string name="trekme_extended_osm_hd_desc">Download OSM HD maps, with a twice better resolution than standard and better readable texts.</string>
     <string name="trekme_extended_activate_ign">With IGN option</string>
     <string name="trekme_extended_ign_maps_title">IGN maps</string>
     <string name="trekme_extended_ign_maps_offline">Topographic IGN maps</string>
     <string name="trekme_extended_ign_maps_satellite">Satellite view</string>
     <string name="trekme_extended_ign_overlay_desc">Overlay slopes for mountain activities, cadastre, roads, paths and trails</string>
     <string name="trekme_extended_advanced_ft">Advanced features</string>
-    <string name="track_follow_shop">Be alerted when you move more than (say) 50m from a track. The alert threshold can be changed</string>
-    <string name="add_beacons">Add beacons to alert you when you get close to specific locations</string>
+    <string name="track_follow_shop">Be alerted when you move away from a track. The alert threshold can be customized.</string>
+    <string name="trekme_extended_update_maps">Fix your maps by downloading missing tiles, or re-download them completely to make them up-to-date. This is only possible with TrekMe v4 and onwards.</string>
+    <string name="add_beacons">Add beacons to alert you when you get close to specific locations.</string>
     <string name="no_ads">No ads</string>
-    <string name="create_map_from_track">Create a map from a gpx track</string>
-    <string name="center_on_track">Quick center on a track from tracks management screen</string>
-    <string name="define_elevation_fix">Set an elevation fix in the GPS statistics panel</string>
-    <string name="osm_level_17">Unlock the 17th level for OSM maps</string>
+    <string name="create_map_from_track">Create a map from a gpx track.</string>
+    <string name="center_on_track">Quick center on a track from tracks management screen.</string>
+    <string name="define_elevation_fix">Set an elevation fix in the GPS statistics panel.</string>
+    <string name="no_download_limit">No download limit.</string>
+    <string name="osm_level_17">Unlock the 17th level for OSM maps.</string>
     <string name="new_features">Exclusive features will be added</string>
     <string name="module_owned">You own this module</string>
     <string name="module_purchase_pending">Purchase pending…</string>

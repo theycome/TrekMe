@@ -1,18 +1,11 @@
 package com.peterlaurence.trekme.core.map.di
 
 import android.app.Application
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.peterlaurence.trekme.core.georecord.data.dao.GeoRecordParserImpl
 import com.peterlaurence.trekme.core.georecord.domain.dao.GeoRecordParser
 import com.peterlaurence.trekme.core.map.data.dao.*
-import com.peterlaurence.trekme.core.map.data.models.RuntimeTypeAdapterFactory
 import com.peterlaurence.trekme.core.map.domain.dao.*
-import com.peterlaurence.trekme.core.projection.MercatorProjection
-import com.peterlaurence.trekme.core.projection.Projection
-import com.peterlaurence.trekme.core.projection.UniversalTransverseMercator
 import com.peterlaurence.trekme.core.settings.Settings
-import com.peterlaurence.trekme.di.DefaultDispatcher
 import com.peterlaurence.trekme.di.IoDispatcher
 import com.peterlaurence.trekme.di.MainDispatcher
 import dagger.Module
@@ -20,6 +13,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -27,27 +21,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object MapModule {
-
-    @Singleton
-    @Provides
-    fun provideGson(): Gson {
-        val projectionHashMap = object : HashMap<String, Class<out Projection>>() {
-            init {
-                put(MercatorProjection.NAME, MercatorProjection::class.java)
-                put(UniversalTransverseMercator.NAME, UniversalTransverseMercator::class.java)
-            }
-        }
-        val factory = RuntimeTypeAdapterFactory.of(
-            Projection::class.java, "projection_name"
-        )
-        for ((key, value) in projectionHashMap) {
-            factory.registerSubtype(value, key)
-        }
-        return GsonBuilder().serializeNulls().setPrettyPrinting()
-            .registerTypeAdapterFactory(factory)
-            .create()
-    }
-
     @MapJson
     @Singleton
     @Provides
@@ -56,6 +29,7 @@ object MapModule {
             prettyPrint = true
             isLenient = true
             ignoreUnknownKeys = true
+            encodeDefaults = true
         }
     }
 
@@ -64,9 +38,9 @@ object MapModule {
     fun provideMapSaverDao(
         @MainDispatcher mainDispatcher: CoroutineDispatcher,
         @IoDispatcher ioDispatcher: CoroutineDispatcher,
-        gson: Gson
+        @MapJson json: Json
     ): MapSaverDao {
-        return MapSaverDaoImpl(mainDispatcher, ioDispatcher, gson)
+        return MapSaverDaoImpl(mainDispatcher, ioDispatcher, json)
     }
 
     @Singleton
@@ -95,61 +69,55 @@ object MapModule {
         @MainDispatcher mainDispatcher: CoroutineDispatcher,
         @IoDispatcher ioDispatcher: CoroutineDispatcher,
         @MapJson json: Json
-    ): BeaconDao {
+    ) : BeaconDao {
         return BeaconsDaoImpl(mainDispatcher, ioDispatcher, json)
     }
 
     @Singleton
     @Provides
     fun provideMapLoaderDao(
-        @IoDispatcher ioDispatcher: CoroutineDispatcher,
         mapSaverDao: MapSaverDao,
-        gson: Gson,
         @MapJson json: Json
     ): MapLoaderDao {
-        return MapLoaderDaoFileBased(ioDispatcher, mapSaverDao, gson, json)
+        return MapLoaderDaoFileBased(mapSaverDao, json, Dispatchers.IO)
     }
 
     @Singleton
     @Provides
     fun provideMapDeleteDao(
         @IoDispatcher ioDispatcher: CoroutineDispatcher
-    ): MapDeleteDao = MapDeleteDaoImpl(ioDispatcher)
+    ) : MapDeleteDao = MapDeleteDaoImpl(ioDispatcher)
 
     @Singleton
     @Provides
     fun provideMapRenameDao(
         @MainDispatcher mainDispatcher: CoroutineDispatcher,
-        @IoDispatcher ioDispatcher: CoroutineDispatcher,
         mapSaverDao: MapSaverDao
-    ): MapRenameDao {
-        return MapRenameDaoImpl(mainDispatcher, ioDispatcher, mapSaverDao)
+    ) : MapRenameDao {
+        return MapRenameDaoImpl(mainDispatcher, mapSaverDao)
     }
 
     @Singleton
     @Provides
     fun provideMapSetThumbnailDao(
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
         mapSaverDao: MapSaverDao,
         app: Application
     ): MapSetThumbnailDao {
-        return MapSetThumbnailDaoImpl(defaultDispatcher, mapSaverDao, app.contentResolver)
+        return MapSetThumbnailDaoImpl(Dispatchers.Default, mapSaverDao, app.contentResolver)
     }
 
     @Singleton
     @Provides
     fun provideMapSizeComputeDao(
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
-        @MainDispatcher mainDispatcher: CoroutineDispatcher,
-    ): MapSizeComputeDao = MapSizeComputeDaoImpl(defaultDispatcher, mainDispatcher)
+        @MapJson json: Json,
+    ): UpdateMapSizeInBytesDao = UpdateMapSizeInBytesDaoImpl(json, Dispatchers.Default)
 
     @Singleton
     @Provides
     fun provideArchiveMapDao(
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
         app: Application
     ): ArchiveMapDao {
-        return ArchiveMapDaoImpl(defaultDispatcher, app)
+        return ArchiveMapDaoImpl(app, Dispatchers.Default)
     }
 
     @Singleton
@@ -160,11 +128,20 @@ object MapModule {
 
     @Singleton
     @Provides
-    fun provideMapSource(
+    fun provideUpdateElevationFixDao(
         @IoDispatcher dispatcher: CoroutineDispatcher,
         @MapJson json: Json
     ): UpdateElevationFixDao {
         return UpdateElevationFixDaoImpl(dispatcher, json)
+    }
+
+    @Singleton
+    @Provides
+    fun provideMapUpdateDataDao(
+        @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        @MapJson json: Json
+    ): MapUpdateDataDao {
+        return MapUpdateDataDaoImpl(ioDispatcher, json)
     }
 
     @Singleton
@@ -189,10 +166,9 @@ object MapModule {
     @Singleton
     @Provides
     fun provideMapDownloadDao(
-        @IoDispatcher ioDispatcher: CoroutineDispatcher,
         settings: Settings,
     ): MapDownloadDao {
-        return MapDownloadDaoImpl(ioDispatcher, settings)
+        return MapDownloadDaoImpl(settings)
     }
 
     @Singleton

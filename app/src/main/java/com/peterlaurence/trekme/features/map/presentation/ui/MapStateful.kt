@@ -1,11 +1,9 @@
 package com.peterlaurence.trekme.features.map.presentation.ui
 
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.view.Surface
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -46,9 +44,7 @@ import com.peterlaurence.trekme.features.map.presentation.viewmodel.*
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.TrackFollowLayer
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.BatteryOptimSolutionDialog
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.BatteryOptimWarningDialog
-import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.LocationRationale
-import com.peterlaurence.trekme.util.android.requestBackgroundLocationPermission
-import com.peterlaurence.trekme.util.android.shouldShowBackgroundLocPermRationale
+import com.peterlaurence.trekme.util.android.getActivityOrNull
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -62,9 +58,12 @@ fun MapStateful(
     statisticsViewModel: StatisticsViewModel = viewModel(),
     gpxRecordServiceViewModel: GpxRecordServiceViewModel = viewModel(),
     onNavigateToTracksManage: () -> Unit,
+    onNavigateToMarkersManage: () -> Unit,
     onNavigateToMarkerEdit: (markerId: String, mapId: UUID) -> Unit,
     onNavigateToExcursionWaypointEdit: (waypointId: String, excursionId: String) -> Unit,
-    onNavigateToBeaconEdit: (beaconId: String, mapId: UUID) -> Unit
+    onNavigateToBeaconEdit: (beaconId: String, mapId: UUID) -> Unit,
+    onNavigateToShop: () -> Unit,
+    onMainMenuClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val purchased by viewModel.purchaseFlow.collectAsState()
@@ -113,6 +112,8 @@ fun MapStateful(
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 locationFlow.collect {
                     viewModel.locationOrientationLayer.onLocation(it)
+                    viewModel.excursionWaypointLayer.onLocation(it)
+                    viewModel.markerLayer.onLocation(it)
                 }
             }
         }
@@ -159,34 +160,18 @@ fun MapStateful(
         }
     }
 
-    val activity = context.getActivity()
     val selectTrack = stringResource(id = R.string.select_track_to_follow)
     var isShowingBatteryWarning by rememberSaveable { mutableStateOf(false) }
     var isShowingBatterySolution by rememberSaveable { mutableStateOf(false) }
-    var isShowingLocationRationale by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffectWithLifecycle(flow = viewModel.trackFollowLayer.events) { event ->
         when (event) {
             TrackFollowLayer.Event.DisableBatteryOptSignal -> isShowingBatteryWarning = true
-            TrackFollowLayer.Event.BackgroundLocationNotGranted -> {
-                /* In this case, check if we should show a rationale. Whatever the outcome, we'll ask
-                 * for the permission. */
-                if (activity == null) return@LaunchedEffectWithLifecycle
-                if (shouldShowBackgroundLocPermRationale(activity)) {
-                    isShowingLocationRationale = true
-                } else {
-                    /* Request permission anyway */
-                    requestBackgroundLocationPermission(activity)
-                }
-            }
-
             TrackFollowLayer.Event.SelectTrackToFollow -> {
                 showSnackbar(scope, snackbarHostState, selectTrack, ok)
             }
         }
     }
-
-    var isShowingTrackFollowHelp by rememberSaveable { mutableStateOf(false) }
 
     when (uiState) {
         Loading -> {
@@ -194,13 +179,16 @@ fun MapStateful(
         }
 
         is MapUiState -> {
+            val mapUiState = uiState as MapUiState
+            val name by mapUiState.mapNameFlow.collectAsStateWithLifecycle()
             /* Always use the light theme background (dark theme or not). Done this way, it
              * doesn't add a GPU overdraw. */
             TrekMeTheme(darkThemeBackground = md_theme_light_background) {
                 Column {
                     MapScaffold(
                         Modifier.weight(1f, true),
-                        uiState as MapUiState,
+                        mapUiState,
+                        name,
                         snackbarHostState,
                         isShowingOrientation,
                         isShowingDistance,
@@ -215,8 +203,10 @@ fun MapStateful(
                         hasElevationFix = purchased,
                         hasBeacons = purchased,
                         hasTrackFollow = purchased,
-                        onMainMenuClick = viewModel::onMainMenuClick,
+                        hasMarkerManage = purchased,
+                        onMainMenuClick = onMainMenuClick,
                         onManageTracks = onNavigateToTracksManage,
+                        onManageMarkers = onNavigateToMarkersManage,
                         onToggleShowOrientation = viewModel::toggleShowOrientation,
                         onAddMarker = viewModel.markerLayer::addMarker,
                         onAddLandmark = viewModel.landmarkLayer::addLandmark,
@@ -230,7 +220,7 @@ fun MapStateful(
                         onPositionFabClick = viewModel.locationOrientationLayer::centerOnPosition,
                         onCompassClick = viewModel::alignToNorth,
                         onElevationFixUpdate = viewModel::onElevationFixUpdate,
-                        onShowTrackFollowHelp = { isShowingTrackFollowHelp = true },
+                        onNavigateToShop = onNavigateToShop,
                         recordingButtons = {
                             RecordingFabStateful(gpxRecordServiceViewModel)
                         }
@@ -245,8 +235,8 @@ fun MapStateful(
 
         is Error -> ErrorScaffold(
             uiState as Error,
-            onMainMenuClick = viewModel::onMainMenuClick,
-            onShopClick = viewModel::onShopClick
+            onMainMenuClick = onMainMenuClick,
+            onShopClick = onNavigateToShop
         )
     }
 
@@ -319,41 +309,13 @@ fun MapStateful(
             }
         )
     }
-
-    if (isShowingLocationRationale) {
-        LocationRationale(
-            text = stringResource(id = R.string.background_location_rationale_track_follow),
-            onConfirm = {
-                if (activity != null) {
-                    requestBackgroundLocationPermission(activity)
-                }
-                isShowingLocationRationale = false
-            },
-            onIgnore = {
-                isShowingLocationRationale = false
-            },
-        )
-    }
-
-    if (isShowingTrackFollowHelp) {
-        AlertDialog(
-            onDismissRequest = { isShowingTrackFollowHelp = false },
-            text = {
-                Text(text = stringResource(id = R.string.track_follow_help))
-            },
-            confirmButton = {
-                TextButton(onClick = { isShowingTrackFollowHelp = false }) {
-                    Text(text = stringResource(id = R.string.ok_dialog))
-                }
-            },
-        )
-    }
 }
 
 @Composable
 private fun MapScaffold(
     modifier: Modifier = Modifier,
     uiState: MapUiState,
+    name: String,
     snackbarHostState: SnackbarHostState,
     isShowingOrientation: Boolean,
     isShowingDistance: Boolean,
@@ -368,8 +330,10 @@ private fun MapScaffold(
     hasElevationFix: Boolean,
     hasBeacons: Boolean,
     hasTrackFollow: Boolean,
+    hasMarkerManage: Boolean,
     onMainMenuClick: () -> Unit,
     onManageTracks: () -> Unit,
+    onManageMarkers: () -> Unit,
     onToggleShowOrientation: () -> Unit,
     onAddMarker: () -> Unit,
     onAddLandmark: () -> Unit,
@@ -383,7 +347,7 @@ private fun MapScaffold(
     onPositionFabClick: () -> Unit,
     onCompassClick: () -> Unit,
     onElevationFixUpdate: (Int) -> Unit,
-    onShowTrackFollowHelp: () -> Unit,
+    onNavigateToShop: () -> Unit,
     recordingButtons: @Composable () -> Unit
 ) {
     Scaffold(
@@ -391,7 +355,7 @@ private fun MapScaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             MapTopAppBar(
-                title = uiState.mapName,
+                title = name,
                 isShowingOrientation = isShowingOrientation,
                 isShowingDistance = isShowingDistance,
                 isShowingDistanceOnTrack = isShowingDistanceOnTrack,
@@ -400,8 +364,10 @@ private fun MapScaffold(
                 isShowingGpsData = isShowingGpsData,
                 hasBeacons = hasBeacons,
                 hasTrackFollow = hasTrackFollow,
+                hasMarkerManage = hasMarkerManage,
                 onMenuClick = onMainMenuClick,
                 onManageTracks = onManageTracks,
+                onManageMarkers = onManageMarkers,
                 onToggleShowOrientation = onToggleShowOrientation,
                 onAddMarker = onAddMarker,
                 onAddLandmark = onAddLandmark,
@@ -412,7 +378,7 @@ private fun MapScaffold(
                 onToggleLockPosition = onToggleLockOnPosition,
                 onToggleShowGpsData = onToggleShowGpsData,
                 onFollowTrack = onFollowTrack,
-                onShowTrackFollowHelp = onShowTrackFollowHelp
+                onNavigateToShop = onNavigateToShop
             )
         },
         floatingActionButton = {
@@ -461,14 +427,9 @@ private fun RecordingFabStateful(viewModel: GpxRecordServiceViewModel) {
     val gpxRecordState by viewModel.status.collectAsState()
     var isShowingBatteryWarning by rememberSaveable { mutableStateOf(false) }
     var isShowingBatterySolution by rememberSaveable { mutableStateOf(false) }
-    var isShowingLocationRationale by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffectWithLifecycle(flow = viewModel.events) { event ->
         when (event) {
-            GpxRecordServiceViewModel.Event.BackgroundLocationNotGranted -> {
-                isShowingLocationRationale = true
-            }
-
             GpxRecordServiceViewModel.Event.DisableBatteryOptSignal -> {
                 isShowingBatteryWarning = true
             }
@@ -498,22 +459,6 @@ private fun RecordingFabStateful(viewModel: GpxRecordServiceViewModel) {
         )
     }
 
-    if (isShowingLocationRationale) {
-        LocationRationale(
-            text = stringResource(id = R.string.background_location_rationale_gpx_recording),
-            onConfirm = {
-                /* The background location permission is asked after the rationale is closed. But it doesn't
-                 * matter that the recording is already started - it works even when the permission is
-                 * granted during the recording. */
-                viewModel.requestBackgroundLocationPerm()
-                isShowingLocationRationale = false
-            },
-            onIgnore = {
-                isShowingLocationRationale = false
-            },
-        )
-    }
-
     RecordingButtons(
         gpxRecordState,
         onStartStopClick = viewModel::onStartStopClicked,
@@ -526,7 +471,7 @@ private fun RecordingFabStateful(viewModel: GpxRecordServiceViewModel) {
  * We need to know the display rotation (either 0, 90°, 180°, or 270°) - and not just the
  * portrait / landscape mode.
  * To get that information, we only need a [Context] for Android 11 and up. However, on Android 10
- * and below, we need the [AppCompatActivity].
+ * and below, we need the activity.
  *
  * @return The angle in decimal degrees
  */
@@ -534,7 +479,7 @@ private fun RecordingFabStateful(viewModel: GpxRecordServiceViewModel) {
 private fun getDisplayRotation(): Int {
     val surfaceRotation: Int = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
         @Suppress("DEPRECATION")
-        LocalContext.current.getActivity()?.windowManager?.defaultDisplay?.rotation
+        LocalContext.current.getActivityOrNull()?.windowManager?.defaultDisplay?.rotation
             ?: Surface.ROTATION_0
     } else {
         LocalContext.current.display?.rotation ?: Surface.ROTATION_0
@@ -546,15 +491,6 @@ private fun getDisplayRotation(): Int {
         Surface.ROTATION_270 -> 270
         else -> 0
     }
-}
-
-/**
- * Depending on where the compose tree was originally created, we might have a [ContextWrapper].
- */
-private tailrec fun Context.getActivity(): AppCompatActivity? = when (this) {
-    is AppCompatActivity -> this
-    is ContextWrapper -> baseContext.getActivity()
-    else -> null
 }
 
 fun showSnackbar(

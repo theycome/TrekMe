@@ -1,6 +1,5 @@
 package com.peterlaurence.trekme.features.record.data.datasource
 
-import com.peterlaurence.trekme.features.common.data.dao.IgnApiDao
 import com.peterlaurence.trekme.features.record.domain.datasource.ElevationDataSource
 import com.peterlaurence.trekme.features.record.domain.datasource.model.*
 import com.peterlaurence.trekme.util.performRequest
@@ -10,11 +9,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 class IgnElevationDataSource(
-    private val ignApiDao: IgnApiDao,
     private val ioDispatcher: CoroutineDispatcher
 ): ElevationDataSource {
     private val client = OkHttpClient.Builder()
@@ -26,21 +25,20 @@ class IgnElevationDataSource(
 
     private val json = Json { isLenient = true; ignoreUnknownKeys = true }
 
-    private val elevationServiceHost = "wxs.ign.fr"
+    private val geopfHost = "data.geopf.fr"
 
     override suspend fun getElevations(
         latList: List<Double>,
         lonList: List<Double>
     ): ElevationResult {
-        val ignApi = ignApiDao.getApi() ?: return Error
         val longitudeList = lonList.joinToString(separator = "|") { it.toString() }
         val latitudeList = latList.joinToString(separator = "|") { it.toString() }
         val url =
-            "https://$elevationServiceHost/$ignApi/alti/rest/elevation.json?lon=$longitudeList&lat=$latitudeList"
-        val req = ignApiDao.requestBuilder.url(url).build()
+            "https://$geopfHost/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=$longitudeList&lat=$latitudeList&resource=ign_rge_alti_wld&delimiter=|&indent=false&measures=false&zonly=true"
+        val req = Request.Builder().url(url).build()
 
         val eleList = withTimeoutOrNull(4000) {
-            client.performRequest<ElevationsResponse>(req, json)?.elevations?.map { it.z }
+            client.performRequest<ElevationsResponse>(req, json)?.elevations
         } ?: return Error
 
         return if (eleList.contains(-99999.0)) {
@@ -60,7 +58,7 @@ class IgnElevationDataSource(
 
         if (internetOk.isSuccess) {
             val apiOk = runCatching {
-                val apiIp = InetAddress.getByName(elevationServiceHost)
+                val apiIp = InetAddress.getByName(geopfHost)
                 apiIp.hostAddress != ""
             }
             ApiStatus(true, apiOk.getOrDefault(false))
@@ -70,8 +68,5 @@ class IgnElevationDataSource(
     }
 
     @Serializable
-    private data class ElevationsResponse(val elevations: List<EleIgnPt>)
-
-    @Serializable
-    private data class EleIgnPt(val lat: Double, val lon: Double, val z: Double, val acc: Double)
+    private data class ElevationsResponse(val elevations: List<Double>)
 }

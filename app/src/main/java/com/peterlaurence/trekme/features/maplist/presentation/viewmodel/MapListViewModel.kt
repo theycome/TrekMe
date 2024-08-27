@@ -8,9 +8,9 @@ import com.peterlaurence.trekme.core.map.domain.interactors.DeleteMapInteractor
 import com.peterlaurence.trekme.core.map.domain.interactors.SetMapInteractor
 import com.peterlaurence.trekme.core.map.domain.models.Map
 import com.peterlaurence.trekme.core.map.domain.models.MapDownloadPending
+import com.peterlaurence.trekme.core.map.domain.models.NewDownloadSpec
 import com.peterlaurence.trekme.core.map.domain.repository.MapRepository
 import com.peterlaurence.trekme.core.settings.Settings
-import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.features.common.domain.repositories.OnBoardingRepository
 import com.peterlaurence.trekme.features.mapcreate.app.service.download.DownloadService
 import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
@@ -19,7 +19,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -36,8 +39,7 @@ class MapListViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val onBoardingRepository: OnBoardingRepository,
     private val deleteMapInteractor: DeleteMapInteractor,
-    private val app: Application,
-    private val appEventBus: AppEventBus
+    private val app: Application
 ) : ViewModel() {
 
     /**
@@ -47,38 +49,43 @@ class MapListViewModel @Inject constructor(
     private val _mapListState = MutableStateFlow(MapListState(emptyList(), true))
     val mapListState: StateFlow<MapListState> = _mapListState.asStateFlow()
 
+    private val _downloadState = MutableStateFlow(DownloadState())
+    val downloadState = _downloadState.asStateFlow()
+
     init {
         viewModelScope.launch {
-            mapRepository.mapListFlow.collect { mapListState ->
+            combine(mapRepository.mapListFlow, downloadRepository.status) { mapListState, downloadStatus ->
+                val idDownloading = if (downloadStatus is DownloadRepository.DownloadingNewMap) {
+                    downloadStatus.mapId
+                } else null
+
                 when (mapListState) {
                     MapRepository.Loading -> Loading
                     is MapRepository.MapList -> {
                         val favList = settings.getFavoriteMapIds().first()
-                        updateMapList(mapListState.mapList, favList)
+                        updateMapList(mapListState.mapList, favList, idDownloading)
                     }
                 }
-            }
+            }.launchIn(this)
         }
 
         viewModelScope.launch {
             downloadRepository.downloadEvent.collect { event ->
-                when (event) {
-                    is MapDownloadPending -> {
-                        _mapListState.value = _mapListState.value.copy(
-                            downloadProgress = event.progress,
-                            isDownloadPending = true
-                        )
-                    }
-
-                    else -> { /* Nothing to do */
+                if (event is MapDownloadPending) {
+                    _downloadState.update {
+                        it.copy(downloadProgress = event.progress)
                     }
                 }
             }
         }
 
         viewModelScope.launch {
-            downloadRepository.started.collect {
-                _mapListState.value = _mapListState.value.copy(isDownloadPending = it)
+            downloadRepository.status.collect { status ->
+                _downloadState.update {
+                    it.copy(
+                        isDownloadPending = status is DownloadRepository.DownloadingNewMap
+                    )
+                }
             }
         }
     }
@@ -99,11 +106,9 @@ class MapListViewModel @Inject constructor(
                 it.copy(isFavorite = !it.isFavorite)
             } else it
         }
-        _mapListState.value = state.copy(mapItems = mapItems)
+        _mapListState.value = state.copy(mapItems = mapItems.sortedByDescending { it.isFavorite })
 
         val ids = _mapListState.value.mapItems.filter { it.isFavorite }.map { it.mapId }
-        val mapList = mapRepository.getCurrentMapList()
-        updateMapList(mapList, ids)
 
         /* Remember this setting */
         viewModelScope.launch {
@@ -138,31 +143,42 @@ class MapListViewModel @Inject constructor(
     /**
      * Order maps so that favorite appear first, then order by name.
      */
-    private fun updateMapList(mapList: List<Map>, favoriteMapIds: List<UUID>) {
+    private fun updateMapList(mapList: List<Map>, favoriteMapIds: List<UUID>, idDownloading: UUID?) {
         /* Order map list with favorites first */
         val items = mapList
-            .sortedBy { it.name.lowercase() }
+            .filter { it.id != idDownloading }
+            .sortedBy { it.name.value.lowercase() }
             .map {
                 val isFavorite = favoriteMapIds.isNotEmpty() && favoriteMapIds.contains(it.id)
                 it.toMapItem(isFavorite)
             }
             .sortedByDescending { it.isFavorite }
 
-        _mapListState.value = MapListState(items, false)  // update with a copy of the list
+        _mapListState.update {
+            it.copy(
+                mapItems = items, // update with a copy of the list
+                isMapListInitializing = false,
+            )
+        }
     }
 
     private fun Map.toMapItem(isFavorite: Boolean): MapItem {
-        return MapItem(id, title = name, isFavorite = isFavorite, image = thumbnailImage)
-    }
-
-    fun onMainMenuClick() {
-        appEventBus.openDrawer()
+        return MapItem(
+            mapId = id,
+            titleFlow = name,
+            isDownloadPending = isDownloadPending,
+            isFavorite = isFavorite,
+            image = thumbnail
+        )
     }
 }
 
 data class MapListState(
     val mapItems: List<MapItem>,
-    val isMapListLoading: Boolean,
+    val isMapListInitializing: Boolean,
+)
+
+data class DownloadState(
     val downloadProgress: Int = 0,
     val isDownloadPending: Boolean = false
 )
