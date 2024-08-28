@@ -41,8 +41,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 class MapDownloadDaoImpl(
-    private val ioDispatcher: CoroutineDispatcher,
-    private val settings: Settings
+    private val settings: Settings,
 ) : MapDownloadDao {
     private val workerCount = 8
 
@@ -197,7 +196,7 @@ class MapDownloadDaoImpl(
         bitmapProvider: BitmapProvider,
         tileWriter: TileWriter,
         tileSize: Int
-    ) = launch(ioDispatcher) {
+    ) = launch(Dispatchers.IO) {
         val bitmap: Bitmap = Bitmap.createBitmap(tileSize, tileSize, Bitmap.Config.ARGB_8888)
         val options = BitmapFactory.Options()
         options.inBitmap = bitmap
