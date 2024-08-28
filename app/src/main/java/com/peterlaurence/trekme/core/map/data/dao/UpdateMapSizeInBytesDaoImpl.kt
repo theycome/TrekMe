@@ -3,8 +3,8 @@ package com.peterlaurence.trekme.core.map.data.dao
 import android.os.StatFs
 import com.peterlaurence.trekme.core.map.data.models.MapFileBased
 import com.peterlaurence.trekme.core.map.data.models.MapPropertiesKtx
-import com.peterlaurence.trekme.core.map.domain.models.Map
 import com.peterlaurence.trekme.core.map.domain.dao.UpdateMapSizeInBytesDao
+import com.peterlaurence.trekme.core.map.domain.models.Map
 import com.peterlaurence.trekme.util.FileUtils
 import com.peterlaurence.trekme.util.writeToFile
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,8 +15,8 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 class UpdateMapSizeInBytesDaoImpl(
+    private val defaultDispatcher: CoroutineDispatcher,
     private val json: Json,
-    private val defaultDispatcher: CoroutineDispatcher
 ) : UpdateMapSizeInBytesDao {
 
     /**

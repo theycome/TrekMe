@@ -5,8 +5,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.peterlaurence.trekme.core.map.data.models.MapFileBased
-import com.peterlaurence.trekme.core.map.domain.models.Map
 import com.peterlaurence.trekme.core.map.domain.dao.ArchiveMapDao
+import com.peterlaurence.trekme.core.map.domain.models.Map
 import com.peterlaurence.trekme.util.ZipProgressionListener
 import com.peterlaurence.trekme.util.stackTraceAsString
 import com.peterlaurence.trekme.util.zipTask
@@ -15,15 +15,16 @@ import kotlinx.coroutines.withContext
 import java.io.OutputStream
 import java.text.DateFormat
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 /**
  * Creates a zip file named with this [Map] name and the date. This file is placed in the
  * parent folder of the [Map].
  */
 class ArchiveMapDaoImpl(
-    private val app: Application,
     private val defaultDispatcher: CoroutineDispatcher,
+    private val app: Application,
 ) : ArchiveMapDao {
 
     override suspend fun archiveMap(map: Map, listener: ZipProgressionListener, uri: Uri) {

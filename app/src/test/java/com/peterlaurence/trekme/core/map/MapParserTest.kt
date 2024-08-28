@@ -24,16 +24,15 @@ import kotlin.test.assertNotNull
 class MapParserTest {
     private val json = MapModule.provideJson()
     private val mapSaverDao = MapSaverDaoImpl(Dispatchers.Unconfined, Dispatchers.IO, json)
-    private val mapLoaderDao = MapLoaderDaoFileBased(
-        mapSaverDao, json, Dispatchers.IO
-    )
+    private val mapLoaderDao = MapLoaderDaoFileBased(Dispatchers.IO, mapSaverDao, json)
 
     private val routeDao = RouteDaoImpl(Dispatchers.IO, Dispatchers.Unconfined, json)
     private val routeRepository = RouteRepository(routeDao)
 
     @Test
     fun mapRoutesParse() = runBlocking {
-        val mapDirURL = MapImportInteractorTest::class.java.classLoader!!.getResource("map-with-routes")
+        val mapDirURL =
+            MapImportInteractorTest::class.java.classLoader!!.getResource("map-with-routes")
         val mapDir = File(mapDirURL.toURI())
 
         assertTrue(mapDir.exists())

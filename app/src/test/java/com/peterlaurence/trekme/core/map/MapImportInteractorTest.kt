@@ -28,9 +28,7 @@ import kotlin.test.fail
 class MapImportInteractorTest {
     private val json = MapModule.provideJson()
     private val mapSaverDao = MapSaverDaoImpl(Dispatchers.Unconfined, Dispatchers.IO, json)
-    private val mapLoaderDao = MapLoaderDaoFileBased(
-        mapSaverDao, json, Dispatchers.IO
-    )
+    private val mapLoaderDao = MapLoaderDaoFileBased(Dispatchers.IO, mapSaverDao, json)
     private val mapRepository = MapRepository()
     private val mapSeekerDao = MapSeekerDaoImpl(mapLoaderDao, mapSaverDao)
 
@@ -84,7 +82,7 @@ class MapImportInteractorTest {
                     try {
                         val res = mapImportInteractor.importFromFile(libVipsMapDir)
                         val map = assertNotNull(res.map)
-                        assertEquals("La Réunion - Est", map.name.value)
+                        assertEquals("La RГ©union - Est", map.name.value)
                         assertEquals(3, map.levelList.size.toLong())
                         val expectedParentFolder = File(libVipsMapDir, "reunion-est")
                         assertEquals(true, File(expectedParentFolder, ".nomedia").exists())
