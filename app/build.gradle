@@ -50,7 +50,11 @@ android {
         }
     }
     kotlinOptions {
-        freeCompilerArgs = ['-Xjvm-default=all-compatibility', '-Xopt-in=androidx.compose.material.ExperimentalMaterialApi']
+        freeCompilerArgs = [
+                '-Xjvm-default=all-compatibility',
+                '-Xopt-in=androidx.compose.material.ExperimentalMaterialApi',
+                '-Xcontext-receivers'
+        ]
     }
     namespace 'com.peterlaurence.trekme'
 }
@@ -105,6 +109,7 @@ dependencies {
     testImplementation "io.kotest:kotest-runner-junit5:$kotest_version"
     testImplementation "io.kotest:kotest-assertions-core:$kotest_version"
     testImplementation "io.kotest:kotest-property:$kotest_version"
+    implementation "io.arrow-kt:arrow-core:1.2.4"
 }
 repositories {
     mavenCentral()
