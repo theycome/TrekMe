@@ -82,7 +82,7 @@ class MapImportInteractorTest {
                     try {
                         val res = mapImportInteractor.importFromFile(libVipsMapDir)
                         val map = assertNotNull(res.map)
-                        assertEquals("La RГ©union - Est", map.name.value)
+                        assertEquals("La Réunion - Est", map.name.value)
                         assertEquals(3, map.levelList.size.toLong())
                         val expectedParentFolder = File(libVipsMapDir, "reunion-est")
                         assertEquals(true, File(expectedParentFolder, ".nomedia").exists())
