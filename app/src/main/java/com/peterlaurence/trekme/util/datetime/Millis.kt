@@ -1,8 +1,13 @@
 package com.peterlaurence.trekme.util.datetime
 
+import android.text.format.DateUtils
 import com.peterlaurence.trekme.util.ext.OperationOnLongFailure
 import com.peterlaurence.trekme.util.ext.minusSafe
 import com.peterlaurence.trekme.util.ext.plusSafe
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -42,9 +47,17 @@ value class Millis(val value: Long) {
 
     operator fun compareTo(other: Millis): Int = value.compareTo(other.value)
 
+    fun abs(): Millis = abs(value).millis
+
     companion object {
+
         val allowableRange = Long.MIN_VALUE..Long.MAX_VALUE
+
         val allowableRangeNoOverflows = allowableRange.first / 2..allowableRange.last / 2
+
+        fun now(): Millis =
+            LocalDateTime.now().withNano(0).millis
+
     }
 
 }
@@ -52,7 +65,7 @@ value class Millis(val value: Long) {
 /**
  * conversions from
  */
-val Millis.days: Days
+val Millis.days_: Days
     get() = this.value.milliseconds.inWholeDays.days_
 
 /**
@@ -63,3 +76,14 @@ val Long.millis: Millis
 
 val Int.millis: Millis
     get() = toLong().millis
+
+val LocalDate.millis: Millis
+    get() = (toEpochDay() * DateUtils.DAY_IN_MILLIS).millis
+
+val LocalTime.millis: Millis
+    get() = (hour * DateUtils.HOUR_IN_MILLIS +
+        minute * DateUtils.MINUTE_IN_MILLIS +
+        second * DateUtils.SECOND_IN_MILLIS).millis
+
+val LocalDateTime.millis: Millis
+    get() = toLocalDate().millis + toLocalTime().millis
