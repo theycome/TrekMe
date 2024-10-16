@@ -2,12 +2,32 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
 import android.util.Log
-import com.android.billingclient.api.*
-import com.android.billingclient.api.BillingClient.BillingResponseCode.*
+import com.android.billingclient.api.AcknowledgePurchaseParams
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
+import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
+import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
-import com.peterlaurence.trekme.core.billing.domain.model.*
+import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
+import com.peterlaurence.trekme.core.billing.domain.model.NotSupportedException
+import com.peterlaurence.trekme.core.billing.domain.model.ProductNotFoundException
+import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
+import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
+import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
+import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.events.AppEventBus
+import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -15,7 +35,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.util.*
+import java.util.Date
+import java.util.UUID
 
 
 /**
@@ -115,12 +136,12 @@ class Billing(
 
     private fun shouldAcknowledgePurchase(purchase: Purchase): Boolean {
         return (purchase.products.any { it == oneTimeId })
-                && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
+            && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
     }
 
     private fun shouldAcknowledgeSubPurchase(purchase: Purchase): Boolean {
         return (purchase.products.any { it in subIdList })
-                && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
+            && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
     }
 
     /**
@@ -167,7 +188,11 @@ class Billing(
             .build()
         val inAppPurchases = queryPurchases(inAppQuery)
         val oneTimeLicense = inAppPurchases.second.getValidOneTimePurchase()?.let {
-            if (purchaseVerifier.checkTime(it.purchaseTime) !is AccessGranted) {
+            if (purchaseVerifier.checkTime(
+                    it.purchaseTime.millis,
+                    Date().time.millis
+                ) !is AccessGranted
+            ) {
                 consume(it.purchaseToken)
                 null
             } else it
@@ -197,7 +222,7 @@ class Billing(
     private fun List<Purchase>.getValidSubPurchase(): Purchase? {
         return firstOrNull {
             it.products.any { id -> id in subIdList } &&
-                    it.isAcknowledged
+                it.isAcknowledged
         }
     }
 
@@ -220,6 +245,7 @@ class Billing(
             OK -> skuDetailsList.find { it.productId == subId }?.let {
                 makeSubscriptionDetails(it)
             } ?: throw ProductNotFoundException()
+
             FEATURE_NOT_SUPPORTED -> throw NotSupportedException()
             SERVICE_DISCONNECTED -> error("should retry")
             else -> error("other error")
