@@ -3,6 +3,7 @@ package com.peterlaurence.trekme.core.billing.data.api.components
 import android.text.format.DateUtils
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.util.datetime.Millis
+import com.peterlaurence.trekme.util.datetime.days_
 import com.peterlaurence.trekme.util.datetime.millis
 import com.peterlaurence.trekme.util.randomizers.IntRangeRandomizer
 import io.kotest.assertions.withClue
@@ -22,28 +23,23 @@ class AnnualWithGracePeriodVerifierTest {
     @Test
     fun `checkTime future`() {
 
-        // +1ms
         verifier.checkTime(now + 1.millis, now) shouldBe
             AccessGranted(validityDuration)
 
-        // +1d
-        verifier.checkTime(now + DateUtils.DAY_IN_MILLIS.millis, now) shouldBe
+        verifier.checkTime(now + 1.days_.millis, now) shouldBe
             AccessGranted(validityDuration + 1)
 
-        // +115d
-        verifier.checkTime(now + (DateUtils.DAY_IN_MILLIS * 115).millis, now) shouldBe
+        verifier.checkTime(now + 115.days_.millis, now) shouldBe
             AccessGranted(validityDuration + 115)
 
-        // +115d + 1d - 1ms
         verifier.checkTime(
-            now + (DateUtils.DAY_IN_MILLIS * 115 + DateUtils.DAY_IN_MILLIS - 1).millis,
+            now + (115.days_.millis + 1.days_.millis - 1.millis),
             now
         ) shouldBe
             AccessGranted(validityDuration + 115)
 
-        // +115d + 1d
         verifier.checkTime(
-            now + (DateUtils.DAY_IN_MILLIS * 115 + DateUtils.DAY_IN_MILLIS).millis,
+            now + (115.days_.millis + 1.days_.millis),
             now
         ) shouldBe
             AccessGranted(validityDuration + 115 + 1)
@@ -67,6 +63,14 @@ class AnnualWithGracePeriodVerifierTest {
 
             }
         }
+
+    }
+
+    @Test
+    fun `checkTime Granted`() {
+
+//        verifier.checkTime(now + 1.millis, now) shouldBe
+//            AccessGranted(validityDuration)
 
     }
 

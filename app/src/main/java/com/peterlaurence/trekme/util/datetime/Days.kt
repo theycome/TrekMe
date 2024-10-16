@@ -35,6 +35,9 @@ val Days.int: Int
 val Days.long: Long
     get() = duration.toLong(DurationUnit.DAYS)
 
+val Days.millis: Millis
+    get() = duration.toLong(DurationUnit.MILLISECONDS).millis
+
 /**
  * conversions to
  */
