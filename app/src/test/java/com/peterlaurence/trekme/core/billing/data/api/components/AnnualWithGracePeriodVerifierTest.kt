@@ -17,8 +17,8 @@ import kotlin.test.Test
  */
 class AnnualWithGracePeriodVerifierTest {
 
-    private val gracePeriod = 15
-    private val validityDuration = 350
+    private val gracePeriod = 15.days_
+    private val validityDuration = 350.days_
     private val verifier = AnnualWithGracePeriodVerifier()
     private val now = Millis.now()
 
@@ -26,25 +26,25 @@ class AnnualWithGracePeriodVerifierTest {
     fun `checkTime future`() {
 
         verifier.checkTime(now + 1.millis, now) shouldBe
-            AccessGranted(validityDuration)
+            AccessGranted(validityDuration.int)
 
         verifier.checkTime(now + 1.days_.millis, now) shouldBe
-            AccessGranted(validityDuration + 1)
+            AccessGranted((validityDuration + 1.days_).int)
 
         verifier.checkTime(now + 115.days_.millis, now) shouldBe
-            AccessGranted(validityDuration + 115)
+            AccessGranted((validityDuration + 115.days_).int)
 
         verifier.checkTime(
             now + (115.days_.millis + 1.days_.millis - 1.millis),
             now
         ) shouldBe
-            AccessGranted(validityDuration + 115)
+            AccessGranted((validityDuration + 115.days_).int)
 
         verifier.checkTime(
             now + (115.days_.millis + 1.days_.millis),
             now
         ) shouldBe
-            AccessGranted(validityDuration + 115 + 1)
+            AccessGranted((validityDuration + 115.days_ + 1.days_).int)
 
     }
 
@@ -62,7 +62,7 @@ class AnnualWithGracePeriodVerifierTest {
                     now + (it).millis,
                     now
                 ) shouldBe
-                    AccessGranted(validityDuration + days)
+                    AccessGranted((validityDuration + days.days_).int)
 
             }
         }
@@ -73,32 +73,32 @@ class AnnualWithGracePeriodVerifierTest {
     fun `checkTime Granted`() {
 
         verifier.checkTime(now - 1.millis, now) shouldBe
-            AccessGranted(validityDuration)
+            AccessGranted(validityDuration.int)
 
         verifier.checkTime(now - 1.days_.millis, now) shouldBe
-            AccessGranted(validityDuration - 1)
+            AccessGranted((validityDuration - 1.days_).int)
 
         verifier.checkTime(now - 115.days_.millis, now) shouldBe
-            AccessGranted(validityDuration - 115)
+            AccessGranted((validityDuration - 115.days_).int)
 
         verifier.checkTime(
             now - (115.days_.millis + 1.days_.millis + 1.millis),
             now
         ) shouldBe
-            AccessGranted(validityDuration - 115 - 1)
+            AccessGranted((validityDuration - 115.days_ - 1.days_).int)
 
         verifier.checkTime(
             now - (115.days_.millis + 1.days_.millis),
             now
         ) shouldBe
-            AccessGranted(validityDuration - 115 - 1)
+            AccessGranted((validityDuration - 115.days_ - 1.days_).int)
 
     }
 
     @Test
     fun `checkTime Granted random`() {
 
-        val randomizer = LongRangeRandomizer(7, 0..validityDuration * DateUtils.DAY_IN_MILLIS)
+        val randomizer = LongRangeRandomizer(7, 0..validityDuration.millis.value)
 
         randomizer.forEach { (it, _) ->
             withClue("$it") {
@@ -109,7 +109,7 @@ class AnnualWithGracePeriodVerifierTest {
                     now - millis,
                     now
                 ) shouldBe
-                    AccessGranted(validityDuration - millis.days_.int)
+                    AccessGranted((validityDuration - millis.days_).int)
 
             }
         }
