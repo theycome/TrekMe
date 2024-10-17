@@ -7,6 +7,7 @@ import com.peterlaurence.trekme.util.datetime.days_
 import com.peterlaurence.trekme.util.datetime.int
 import com.peterlaurence.trekme.util.datetime.millis
 import com.peterlaurence.trekme.util.randomizers.IntRangeRandomizer
+import com.peterlaurence.trekme.util.randomizers.LongRangeRandomizer
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
@@ -94,22 +95,21 @@ class AnnualWithGracePeriodVerifierTest {
 
     }
 
-
     @Test
     fun `checkTime Granted random`() {
 
-        val randomizer = IntRangeRandomizer(7, 0..validityDuration)
+        val randomizer = LongRangeRandomizer(7, 0..validityDuration * DateUtils.DAY_IN_MILLIS)
 
         randomizer.forEach { (it, _) ->
             withClue("$it") {
 
-                val days = it.days_
+                val millis = it.millis
 
                 verifier.checkTime(
-                    now - days.millis,
+                    now - millis,
                     now
                 ) shouldBe
-                    AccessGranted(validityDuration - days.int)
+                    AccessGranted(validityDuration - millis.days_.int)
 
             }
         }
