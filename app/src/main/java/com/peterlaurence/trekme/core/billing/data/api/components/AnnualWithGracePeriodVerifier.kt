@@ -31,7 +31,7 @@ class AnnualWithGracePeriodVerifier : PurchaseVerifier {
         val sincePurchase = now - purchaseTime
         val daysToPurchase = sincePurchase.abs().days_
 
-        return if (sincePurchase.value > 0) {
+        return if (sincePurchase.long > 0) {
             when {
                 (daysToPurchase <= VALIDITY_DURATION) ->
                     AccessGranted((VALIDITY_DURATION - daysToPurchase).int)

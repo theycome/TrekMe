@@ -98,7 +98,7 @@ class AnnualWithGracePeriodVerifierTest {
     @Test
     fun `checkTime Granted random`() {
 
-        val randomizer = LongRangeRandomizer(7, 0..validityDuration.millis.value)
+        val randomizer = LongRangeRandomizer(7, 0..validityDuration.millis.long)
 
         randomizer.forEach { (it, _) ->
             withClue("$it") {

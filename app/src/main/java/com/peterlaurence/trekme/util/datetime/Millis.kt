@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.util.datetime
 
 import android.text.format.DateUtils
+import arrow.core.raise.recover
 import com.peterlaurence.trekme.util.ext.OperationOnLongFailure
 import com.peterlaurence.trekme.util.ext.minusSafe
 import com.peterlaurence.trekme.util.ext.plusSafe
@@ -12,18 +13,18 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Created by Ivan Yakushev on 06.09.2024
- * @param value could be negative
+ * @param long could be negative
  */
 @JvmInline
-value class Millis(val value: Long) {
+value class Millis(val long: Long) {
 
     operator fun plus(other: Millis?): Millis {
         val rhs = other ?: return this
 
-        val a = value
-        val b = rhs.value
+        val a = long
+        val b = rhs.long
 
-        return arrow.core.raise.recover({ a.plusSafe(b, allowableRange) }) {
+        return recover({ a.plusSafe(b, allowableRange) }) {
             when (it) {
                 OperationOnLongFailure.OVERFLOW -> error("Overflow when performing $a plus $b")
                 OperationOnLongFailure.UNDERFLOW -> error("Underflow when performing $a plus $b")
@@ -34,10 +35,10 @@ value class Millis(val value: Long) {
     operator fun minus(other: Millis?): Millis {
         val rhs = other ?: return this
 
-        val a = value
-        val b = rhs.value
+        val a = long
+        val b = rhs.long
 
-        return arrow.core.raise.recover({ a.minusSafe(b, allowableRange) }) {
+        return recover({ a.minusSafe(b, allowableRange) }) {
             when (it) {
                 OperationOnLongFailure.OVERFLOW -> error("Overflow when performing $a minus $b")
                 OperationOnLongFailure.UNDERFLOW -> error("Underflow when performing $a minus $b")
@@ -45,9 +46,9 @@ value class Millis(val value: Long) {
         }.millis
     }
 
-    operator fun compareTo(other: Millis): Int = value.compareTo(other.value)
+    operator fun compareTo(other: Millis): Int = long.compareTo(other.long)
 
-    fun abs(): Millis = abs(value).millis
+    fun abs(): Millis = abs(long).millis
 
     companion object {
 
@@ -66,7 +67,7 @@ value class Millis(val value: Long) {
  * conversions from
  */
 val Millis.days_: Days
-    get() = this.value.milliseconds.inWholeDays.days_
+    get() = this.long.milliseconds.inWholeDays.days_
 
 /**
  * conversions to
