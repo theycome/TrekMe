@@ -1,7 +1,9 @@
 package com.peterlaurence.trekme.core.billing.data.api.components
 
 import android.text.format.DateUtils
+import com.peterlaurence.trekme.core.billing.domain.model.AccessDeniedLicenseOutdated
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
+import com.peterlaurence.trekme.core.billing.domain.model.GracePeriod
 import com.peterlaurence.trekme.util.datetime.Millis
 import com.peterlaurence.trekme.util.datetime.days_
 import com.peterlaurence.trekme.util.datetime.int
@@ -110,6 +112,49 @@ class AnnualWithGracePeriodVerifierTest {
                     now
                 ) shouldBe
                     AccessGranted((validityDuration - millis.days_).int)
+
+            }
+        }
+
+    }
+
+    @Test
+    fun `checkTime GracePeriod random`() {
+
+        val randomizer = LongRangeRandomizer(
+            7,
+            // range of (351d .. 365d)
+            (validityDuration.millis + 1.days_.millis).long..
+                ((validityDuration + gracePeriod).millis - 1.millis).long
+        )
+
+        randomizer.forEach { (it, _) ->
+            withClue("$it") {
+
+                val millis = it.millis
+
+                verifier.checkTime(now - millis, now) shouldBe
+                    GracePeriod((validityDuration + gracePeriod - millis.days_).int)
+
+            }
+        }
+
+    }
+
+    @Test
+    fun `checkTime AccessDeniedLicenseOutdated random`() {
+
+        val randomizer = LongRangeRandomizer(
+            7,
+            ((validityDuration + gracePeriod).millis).long..Long.MAX_VALUE
+        )
+
+        randomizer.forEach { (it, _) ->
+            withClue("$it") {
+
+                val millis = it.millis
+
+                verifier.checkTime(now - millis, now) shouldBe AccessDeniedLicenseOutdated
 
             }
         }
