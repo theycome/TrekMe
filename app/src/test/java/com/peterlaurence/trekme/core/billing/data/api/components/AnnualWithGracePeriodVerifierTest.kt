@@ -19,8 +19,8 @@ import kotlin.test.Test
  */
 class AnnualWithGracePeriodVerifierTest {
 
-    private val gracePeriod = 15.days_
-    private val validityDuration = 350.days_
+    private val gracePeriod = AnnualWithGracePeriodVerifier.GRACE_PERIOD
+    private val validityDuration = AnnualWithGracePeriodVerifier.VALIDITY_DURATION
     private val verifier = AnnualWithGracePeriodVerifier()
     private val now = Millis.now()
 

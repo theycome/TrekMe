@@ -11,13 +11,6 @@ import com.peterlaurence.trekme.util.datetime.days_
 import com.peterlaurence.trekme.util.datetime.int
 import java.util.Date
 
-/**
- * number of days the user is allowed to use the app despite expired license
- */
-private val GRACE_PERIOD: Days = 15.days_
-
-private val VALIDITY_DURATION: Days = 365.days_ - GRACE_PERIOD
-
 class AnnualWithGracePeriodVerifier : PurchaseVerifier {
 
     /**
@@ -46,5 +39,15 @@ class AnnualWithGracePeriodVerifier : PurchaseVerifier {
         }
     }
 
-}
+    companion object {
 
+        /**
+         * number of days the user is allowed to use the app despite expired license
+         */
+        val GRACE_PERIOD: Days = 15.days_
+
+        val VALIDITY_DURATION: Days = 365.days_ - GRACE_PERIOD
+
+    }
+
+}
