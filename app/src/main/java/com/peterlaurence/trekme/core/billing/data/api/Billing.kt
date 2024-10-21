@@ -51,7 +51,7 @@ class Billing(
     private val oneTimeId: String,
     private val subIdList: List<String>,
     private val purchaseVerifier: PurchaseVerifier,
-    private val appEventBus: AppEventBus
+    private val appEventBus: AppEventBus,
 ) : BillingApi {
 
     override val purchaseAcknowledgedEvent =
@@ -287,8 +287,10 @@ class Billing(
             )
 
         val params = QueryProductDetailsParams.newBuilder().setProductList(productList)
-        billingClient.queryProductDetailsAsync(params.build()) { billingResult,
-                                                                 productDetailsList ->
+        billingClient.queryProductDetailsAsync(params.build()) {
+                billingResult,
+                productDetailsList,
+            ->
             trySend(ProductDetailsResult(billingResult, productDetailsList))
         }
 
@@ -332,12 +334,12 @@ class Billing(
 
     private data class ProductDetailsResult(
         val billingResult: BillingResult,
-        val productDetailsList: List<ProductDetails>
+        val productDetailsList: List<ProductDetails>,
     )
 
     override fun launchBilling(
         id: UUID,
-        purchasePendingCb: () -> Unit
+        purchasePendingCb: () -> Unit,
     ) {
         val productDetails = productDetailsForId[id] ?: return
         val offerToken = productDetails.subscriptionOfferDetails?.get(0)?.offerToken ?: return
