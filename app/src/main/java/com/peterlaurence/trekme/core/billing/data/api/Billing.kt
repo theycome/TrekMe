@@ -160,8 +160,9 @@ class Billing(
         val inAppQuery = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
+
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeAck = inAppPurchases.second.getOneTimePurchase()?.let {
+        val oneTimeAck = inAppPurchases.purchases.getOneTimePurchase()?.let {
             if (shouldAcknowledgePurchase(it)) {
                 acknowledge(it)
             } else false
@@ -171,7 +172,7 @@ class Billing(
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         val subs = queryPurchases(subQuery)
-        val subAck = subs.second.getSubPurchase()?.let {
+        val subAck = subs.purchases.getSubPurchase()?.let {
             if (shouldAcknowledgeSubPurchase(it)) {
                 acknowledge(it)
             } else false
@@ -187,7 +188,7 @@ class Billing(
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeLicense = inAppPurchases.second.getValidOneTimePurchase()?.let {
+        val oneTimeLicense = inAppPurchases.purchases.getValidOneTimePurchase()?.let {
             if (purchaseVerifier.checkTime(
                     it.purchaseTime.millis,
                     Date().time.millis
@@ -203,7 +204,7 @@ class Billing(
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
             val subs = queryPurchases(subQuery)
-            subs.second.getValidSubPurchase() != null
+            subs.purchases.getValidSubPurchase() != null
         } else true
     }
 
@@ -255,7 +256,7 @@ class Billing(
     /**
      * Suspends at most 10s (waits for billing client to connect).
      * Since the [BillingClient] can only notify its state through the [connectionStateListener], we
-     * poll the [connected] status. Ideally, we would collect the billing client state flow..
+     * poll the [connected] status. Ideally, we would collect the billing client state flow...
      */
     private suspend fun awaitConnect() {
         connectClient()
@@ -304,10 +305,10 @@ class Billing(
      * By collecting a [callbackFlow], the real collector is on a different call stack. So the
      * [BillingClient] has no reference on the collector.
      */
-    private suspend fun queryPurchases(params: QueryPurchasesParams): Pair<BillingResult, List<Purchase>> =
+    private suspend fun queryPurchases(params: QueryPurchasesParams): PurchaseQueried =
         callbackFlow {
-            billingClient.queryPurchasesAsync(params) { r, p ->
-                trySend(Pair(r, p))
+            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
+                trySend(PurchaseQueried(billingResult, purchases))
             }
             awaitClose { /* We can't do anything, but it doesn't matter */ }
         }.first()
@@ -403,6 +404,12 @@ class Billing(
             trialInfo = trialInfo
         )
     }
+
+    private data class PurchaseQueried(
+        val billingResult: BillingResult,
+        val purchases: List<Purchase>,
+    )
+
 }
 
 private const val TAG = "Billing.kt"
