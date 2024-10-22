@@ -87,6 +87,12 @@ class Billing(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
         ).build()
 
+    private fun callPurchasePendingCallback() {
+        if (::purchasePendingCallback.isInitialized) {
+            purchasePendingCallback()
+        }
+    }
+
     /**
      * Attempts to connect the billing service. This function immediately returns.
      * See also [awaitConnect], which suspends at most 10s.
@@ -393,9 +399,7 @@ class Billing(
             ) {
                 acknowledgePurchase(this) // ? ambiguity in naming
             } else if (purchaseState == Purchase.PurchaseState.PENDING) {
-                if (this@Billing::purchasePendingCallback.isInitialized) {
-                    purchasePendingCallback()
-                }
+                callPurchasePendingCallback()
             }
         }
     }
