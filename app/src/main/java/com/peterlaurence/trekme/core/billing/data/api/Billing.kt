@@ -275,10 +275,10 @@ class Billing(
      * By collecting a [callbackFlow], the real collector is on a different call stack. So the
      * [BillingClient] has no reference on the collector.
      */
-    private suspend fun queryPurchases(params: QueryPurchasesParams): PurchaseQueried =
+    private suspend fun queryPurchases(params: QueryPurchasesParams): PurchasesQueriedResult =
         callbackFlow {
             billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
-                trySend(PurchaseQueried(billingResult, purchases))
+                trySend(PurchasesQueriedResult(billingResult, purchases))
             }
             awaitClose { /* We can't do anything, but it doesn't matter */ }
         }.first()
@@ -408,7 +408,7 @@ class Billing(
     /**
      * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
      */
-    private data class PurchaseQueried(
+    private data class PurchasesQueriedResult(
         val billingResult: BillingResult,
         val purchases: List<Purchase>,
     )
