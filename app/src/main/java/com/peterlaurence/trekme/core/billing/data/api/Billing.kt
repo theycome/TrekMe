@@ -104,18 +104,6 @@ class Billing(
         billingClient.startConnection(connectionStateListener)
     }
 
-    private fun acknowledgePurchase(purchase: Purchase) {
-        /* Approve the payment */
-        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
-        billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
-            if (it.responseCode == OK) {
-                purchaseAcknowledgedEvent.tryEmit(Unit)
-            }
-        }
-    }
-
     private fun shouldAcknowledgePurchase(purchase: Purchase): Boolean {
         return (purchase.products.any { it == oneTimeId })
             && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
@@ -295,6 +283,19 @@ class Billing(
             awaitClose { /* We can't do anything, but it doesn't matter */ }
         }.first()
 
+
+    private fun acknowledgePurchase(purchase: Purchase) {
+        /* Approve the payment */
+        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
+            if (it.responseCode == OK) {
+                purchaseAcknowledgedEvent.tryEmit(Unit)
+            }
+        }
+    }
+
     /**
      * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
      * the provided callback given to [BillingClient.acknowledgePurchase] - so creating a memory
@@ -314,11 +315,6 @@ class Billing(
 
         awaitClose { /* We can't do anything, but it doesn't matter */ }
     }.first()
-
-    private data class ProductDetailsResult(
-        val billingResult: BillingResult,
-        val productDetailsList: List<ProductDetails>,
-    )
 
     override fun launchBilling(
         id: UUID,
@@ -387,14 +383,6 @@ class Billing(
         )
     }
 
-    /**
-     * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
-     */
-    private data class PurchaseQueried(
-        val billingResult: BillingResult,
-        val purchases: List<Purchase>,
-    )
-
     context(Billing)
     private fun Purchase.acknowledge() {
         if (
@@ -411,6 +399,19 @@ class Billing(
             }
         }
     }
+
+    private data class ProductDetailsResult(
+        val billingResult: BillingResult,
+        val productDetailsList: List<ProductDetails>,
+    )
+
+    /**
+     * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
+     */
+    private data class PurchaseQueried(
+        val billingResult: BillingResult,
+        val purchases: List<Purchase>,
+    )
 
 }
 
