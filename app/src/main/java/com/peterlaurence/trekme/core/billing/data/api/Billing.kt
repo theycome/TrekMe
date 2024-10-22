@@ -38,7 +38,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Date
 import java.util.UUID
 
-
 /**
  * Manages a subscription along with a one-time purchase.
  * To access some functionality, a user should have an active subscription, or a valid one-time
@@ -60,6 +59,7 @@ class Billing(
     private lateinit var purchasePendingCallback: () -> Unit
 
     private var connected = false
+
     private val connectionStateListener = object : BillingClientStateListener {
         override fun onBillingSetupFinished(billingResult: BillingResult) {
             connected = billingResult.responseCode == OK
@@ -71,27 +71,9 @@ class Billing(
     }
 
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-        fun acknowledge() {
-            purchases?.forEach {
-                if (
-                    it.products.any { id ->
-                        id == oneTimeId || id in subIdList
-                    }
-                ) {
-                    if (it.purchaseState == Purchase.PurchaseState.PURCHASED && !it.isAcknowledged) {
-                        acknowledgePurchase(it)
-                    } else if (it.purchaseState == Purchase.PurchaseState.PENDING) {
-                        if (this::purchasePendingCallback.isInitialized) {
-                            purchasePendingCallback()
-                        }
-                    }
-                }
-            }
-        }
-
-        if (purchases != null) {
-            if (billingResult.responseCode == OK) {
-                acknowledge()
+        if (purchases != null && billingResult.responseCode == OK) {
+            purchases.forEach {
+                it.acknowledge()
             }
         }
     }
@@ -405,10 +387,30 @@ class Billing(
         )
     }
 
+    /**
+     * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
+     */
     private data class PurchaseQueried(
         val billingResult: BillingResult,
         val purchases: List<Purchase>,
     )
+
+    context(Billing)
+    private fun Purchase.acknowledge() {
+        if (
+            products.any { id -> id == oneTimeId || id in subIdList }
+        ) {
+            if (purchaseState == Purchase.PurchaseState.PURCHASED &&
+                !isAcknowledged
+            ) {
+                acknowledgePurchase(this) // ? ambiguity in naming
+            } else if (purchaseState == Purchase.PurchaseState.PENDING) {
+                if (this@Billing::purchasePendingCallback.isInitialized) {
+                    purchasePendingCallback()
+                }
+            }
+        }
+    }
 
 }
 
