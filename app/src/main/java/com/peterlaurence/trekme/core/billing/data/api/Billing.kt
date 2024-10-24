@@ -138,23 +138,23 @@ class Billing(
             .build()
 
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeAck = inAppPurchases.purchases.getOneTimePurchase()?.let {
-            if (shouldAcknowledgePurchase(it)) {
-                acknowledge(it)
+        val oneTimeAcknowledge = inAppPurchases.purchases.getOneTimePurchase()?.run {
+            if (shouldAcknowledgePurchase(this)) {
+                acknowledgeByBillingSuspended()
             } else false
         } ?: false
 
         val subQuery = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
-        val subs = queryPurchases(subQuery)
-        val subAck = subs.purchases.getSubPurchase()?.let {
-            if (shouldAcknowledgeSubPurchase(it)) {
-                acknowledge(it)
+        val subPurchases = queryPurchases(subQuery)
+        val subAcknowledge = subPurchases.purchases.getSubPurchase()?.run {
+            if (shouldAcknowledgeSubPurchase(this)) {
+                acknowledgeByBillingSuspended()
             } else false
         } ?: false
 
-        return oneTimeAck || subAck
+        return oneTimeAcknowledge || subAcknowledge
     }
 
     override suspend fun isPurchased(): Boolean {
@@ -289,39 +289,6 @@ class Billing(
             awaitClose { /* We can't do anything, but it doesn't matter */ }
         }.first()
 
-
-    private fun acknowledgePurchase(purchase: Purchase) {
-        /* Approve the payment */
-        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
-        billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
-            if (it.responseCode == OK) {
-                purchaseAcknowledgedEvent.tryEmit(Unit)
-            }
-        }
-    }
-
-    /**
-     * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
-     * the provided callback given to [BillingClient.acknowledgePurchase] - so creating a memory
-     * leak.
-     * By collecting a [callbackFlow], the real collector is on a different call stack. So the
-     * [BillingClient] has no reference on the collector.
-     */
-    private suspend fun acknowledge(purchase: Purchase) = callbackFlow {
-        /* Approve the payment */
-        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
-
-        billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
-            trySend(it.responseCode == OK)
-        }
-
-        awaitClose { /* We can't do anything, but it doesn't matter */ }
-    }.first()
-
     override fun launchBilling(
         id: UUID,
         purchasePendingCb: () -> Unit,
@@ -389,7 +356,6 @@ class Billing(
         )
     }
 
-    context(Billing)
     private fun Purchase.acknowledge() {
         if (
             products.any { id -> id == oneTimeId || id in subIdList }
@@ -397,10 +363,37 @@ class Billing(
             if (purchaseState == Purchase.PurchaseState.PURCHASED &&
                 !isAcknowledged
             ) {
-                acknowledgePurchase(this) // ? ambiguity in naming
+                acknowledgeByBilling {
+                    if (it.responseCode == OK) {
+                        purchaseAcknowledgedEvent.tryEmit(Unit)
+                    }
+                }
             } else if (purchaseState == Purchase.PurchaseState.PENDING) {
                 callPurchasePendingCallback()
             }
+        }
+    }
+
+    /**
+     * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
+     * the provided callback given to [BillingClient.acknowledgePurchase] - so creating a memory
+     * leak.
+     * By collecting a [callbackFlow], the real collector is on a different call stack. So the
+     * [BillingClient] has no reference on the collector.
+     */
+    private suspend fun Purchase.acknowledgeByBillingSuspended() = callbackFlow {
+        acknowledgeByBilling {
+            trySend(it.responseCode == OK)
+        }
+        awaitClose { /* We can't do anything, but it doesn't matter */ }
+    }.first()
+
+    private fun Purchase.acknowledgeByBilling(block: (BillingResult) -> Unit) {
+        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchaseToken)
+            .build()
+        billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
+            block(it)
         }
     }
 
@@ -420,4 +413,3 @@ class Billing(
 }
 
 private const val TAG = "Billing.kt"
-
