@@ -55,3 +55,13 @@ fun Purchase.acknowledgeByBilling(
         onSuccess(it)
     }
 }
+
+fun Purchase.shouldAcknowledgePurchase(purchaseSKU: PurchaseSKU): Boolean {
+    return (products.any { it == purchaseSKU.oneTimeId })
+        && purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
+}
+
+fun Purchase.shouldAcknowledgeSubPurchase(purchaseSKU: PurchaseSKU): Boolean {
+    return (products.any { it in purchaseSKU.subIdList })
+        && purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
+}

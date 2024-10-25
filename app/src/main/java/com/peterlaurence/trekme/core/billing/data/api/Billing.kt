@@ -116,17 +116,6 @@ class Billing(
         billingClient.startConnection(connectionStateListener)
     }
 
-    // FIXME - move into Purchase extension
-    private fun shouldAcknowledgePurchase(purchase: Purchase): Boolean {
-        return (purchase.products.any { it == purchaseSKU.oneTimeId })
-            && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
-    }
-
-    private fun shouldAcknowledgeSubPurchase(purchase: Purchase): Boolean {
-        return (purchase.products.any { it in purchaseSKU.subIdList })
-            && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
-    }
-
     /**
      * This is one of the first things to do. If either the one-time or the subscription are among
      * the purchases, check if it should be acknowledged. This call is required when the
@@ -146,7 +135,7 @@ class Billing(
 
         val inAppPurchases = queryPurchases(inAppQuery)
         val oneTimeAcknowledge = inAppPurchases.purchases.getOneTimePurchase()?.run {
-            if (shouldAcknowledgePurchase(this)) {
+            if (shouldAcknowledgePurchase(purchaseSKU)) {
                 acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
@@ -156,7 +145,7 @@ class Billing(
             .build()
         val subPurchases = queryPurchases(subQuery)
         val subAcknowledge = subPurchases.purchases.getSubPurchase()?.run {
-            if (shouldAcknowledgeSubPurchase(this)) {
+            if (shouldAcknowledgeSubPurchase(purchaseSKU)) {
                 acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
