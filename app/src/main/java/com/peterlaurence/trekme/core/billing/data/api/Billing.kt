@@ -46,8 +46,7 @@ import java.util.UUID
  */
 class Billing(
     val application: Application,
-    private val oneTimeId: String, // TODO - pass already as a constructed PurchaseCredentials
-    private val subIdList: List<String>,
+    private val purchaseSKU: PurchaseSKU,
     private val purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
 ) : BillingApi {
@@ -74,7 +73,7 @@ class Billing(
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (purchases != null && billingResult.responseCode == OK) {
             purchases.forEach { purchase ->
-                if (purchase.products.any { id -> id == oneTimeId || id in subIdList }) {
+                if (purchase.products.any { id -> id == purchaseSKU.oneTimeId || id in purchaseSKU.subIdList }) {
                     purchase.acknowledge(
                         billingClient,
                         onSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
@@ -119,12 +118,12 @@ class Billing(
 
     // FIXME - move into Purchase extension
     private fun shouldAcknowledgePurchase(purchase: Purchase): Boolean {
-        return (purchase.products.any { it == oneTimeId })
+        return (purchase.products.any { it == purchaseSKU.oneTimeId })
             && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
     }
 
     private fun shouldAcknowledgeSubPurchase(purchase: Purchase): Boolean {
-        return (purchase.products.any { it in subIdList })
+        return (purchase.products.any { it in purchaseSKU.subIdList })
             && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
     }
 
@@ -195,20 +194,20 @@ class Billing(
     // TODO - add Credentials parameter and pass further filtering down into Purchase extension function
     // TODO - move into Purchase extension, add typealias
     private fun List<Purchase>.getOneTimePurchase(): Purchase? {
-        return firstOrNull { it.products.any { id -> id == oneTimeId } }
+        return firstOrNull { it.products.any { id -> id == purchaseSKU.oneTimeId } }
     }
 
     private fun List<Purchase>.getSubPurchase(): Purchase? {
-        return firstOrNull { it.products.any { id -> id in subIdList } }
+        return firstOrNull { it.products.any { id -> id in purchaseSKU.subIdList } }
     }
 
     private fun List<Purchase>.getValidOneTimePurchase(): Purchase? {
-        return firstOrNull { it.products.any { id -> id == oneTimeId } && it.isAcknowledged }
+        return firstOrNull { it.products.any { id -> id == purchaseSKU.oneTimeId } && it.isAcknowledged }
     }
 
     private fun List<Purchase>.getValidSubPurchase(): Purchase? {
         return firstOrNull {
-            it.products.any { id -> id in subIdList } &&
+            it.products.any { id -> id in purchaseSKU.subIdList } &&
                 it.isAcknowledged
         }
     }
@@ -226,7 +225,7 @@ class Billing(
      */
     // FIXME - use typed result as a return type instead of exceptions
     override suspend fun getSubDetails(index: Int): SubscriptionDetails {
-        val subId = subIdList.getOrNull(index) ?: error("no sku for index $index")
+        val subId = purchaseSKU.subIdList.getOrNull(index) ?: error("no sku for index $index")
         awaitConnect()
         val (billingResult, skuDetailsList) = querySubDetails(subId)
         return when (billingResult.responseCode) {
