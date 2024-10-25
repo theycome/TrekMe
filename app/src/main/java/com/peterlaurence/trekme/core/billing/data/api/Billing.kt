@@ -2,7 +2,6 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
 import android.util.Log
-import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
@@ -47,11 +46,13 @@ import java.util.UUID
  */
 class Billing(
     val application: Application,
-    private val oneTimeId: String,
+    private val oneTimeId: String, // TODO - pass already as a constructed PurchaseCredentials
     private val subIdList: List<String>,
     private val purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
 ) : BillingApi {
+
+    // FIXME - encapsulate calls in a BillingClientWrapper
 
     override val purchaseAcknowledgedEvent =
         MutableSharedFlow<Unit>(0, 1, BufferOverflow.DROP_OLDEST)
@@ -72,15 +73,21 @@ class Billing(
 
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (purchases != null && billingResult.responseCode == OK) {
-            purchases.forEach {
-                it.acknowledge()
+            purchases.forEach { purchase ->
+                if (purchase.products.any { id -> id == oneTimeId || id in subIdList }) {
+                    purchase.acknowledge(
+                        billingClient,
+                        onSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
+                        onPending = { callPurchasePendingCallback() }
+                    )
+                }
             }
         }
     }
 
     private val productDetailsForId = mutableMapOf<UUID, ProductDetails>()
 
-    private val billingClient = BillingClient
+    private val billingClient: BillingClient = BillingClient
         .newBuilder(application)
         .setListener(purchaseUpdatedListener)
         .enablePendingPurchases(
@@ -110,6 +117,7 @@ class Billing(
         billingClient.startConnection(connectionStateListener)
     }
 
+    // FIXME - move into Purchase extension
     private fun shouldAcknowledgePurchase(purchase: Purchase): Boolean {
         return (purchase.products.any { it == oneTimeId })
             && purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged
@@ -140,7 +148,7 @@ class Billing(
         val inAppPurchases = queryPurchases(inAppQuery)
         val oneTimeAcknowledge = inAppPurchases.purchases.getOneTimePurchase()?.run {
             if (shouldAcknowledgePurchase(this)) {
-                acknowledgeByBillingSuspended()
+                acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
 
@@ -150,7 +158,7 @@ class Billing(
         val subPurchases = queryPurchases(subQuery)
         val subAcknowledge = subPurchases.purchases.getSubPurchase()?.run {
             if (shouldAcknowledgeSubPurchase(this)) {
-                acknowledgeByBillingSuspended()
+                acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
 
@@ -184,6 +192,8 @@ class Billing(
         } else true
     }
 
+    // TODO - add Credentials parameter and pass further filtering down into Purchase extension function
+    // TODO - move into Purchase extension, add typealias
     private fun List<Purchase>.getOneTimePurchase(): Purchase? {
         return firstOrNull { it.products.any { id -> id == oneTimeId } }
     }
@@ -214,6 +224,7 @@ class Billing(
      * Get the details of a subscription.
      * @throws [ProductNotFoundException], [NotSupportedException], [IllegalStateException]
      */
+    // FIXME - use typed result as a return type instead of exceptions
     override suspend fun getSubDetails(index: Int): SubscriptionDetails {
         val subId = subIdList.getOrNull(index) ?: error("no sku for index $index")
         awaitConnect()
@@ -234,6 +245,7 @@ class Billing(
      * Since the [BillingClient] can only notify its state through the [connectionStateListener], we
      * poll the [connected] status. Ideally, we would collect the billing client state flow...
      */
+    // FIXME - encapsulate in BillingCLientWrapper, pass time as parameters with default values
     private suspend fun awaitConnect() {
         connectClient()
 
@@ -354,47 +366,6 @@ class Billing(
             price = realPricePhase.formattedPrice,
             trialInfo = trialInfo
         )
-    }
-
-    private fun Purchase.acknowledge() {
-        if (
-            products.any { id -> id == oneTimeId || id in subIdList }
-        ) {
-            if (purchaseState == Purchase.PurchaseState.PURCHASED &&
-                !isAcknowledged
-            ) {
-                acknowledgeByBilling {
-                    if (it.responseCode == OK) {
-                        purchaseAcknowledgedEvent.tryEmit(Unit)
-                    }
-                }
-            } else if (purchaseState == Purchase.PurchaseState.PENDING) {
-                callPurchasePendingCallback()
-            }
-        }
-    }
-
-    /**
-     * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
-     * the provided callback given to [BillingClient.acknowledgePurchase] - so creating a memory
-     * leak.
-     * By collecting a [callbackFlow], the real collector is on a different call stack. So the
-     * [BillingClient] has no reference on the collector.
-     */
-    private suspend fun Purchase.acknowledgeByBillingSuspended() = callbackFlow {
-        acknowledgeByBilling {
-            trySend(it.responseCode == OK)
-        }
-        awaitClose { /* We can't do anything, but it doesn't matter */ }
-    }.first()
-
-    private fun Purchase.acknowledgeByBilling(block: (BillingResult) -> Unit) {
-        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchaseToken)
-            .build()
-        billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
-            block(it)
-        }
     }
 
     private data class ProductDetailsResult(
