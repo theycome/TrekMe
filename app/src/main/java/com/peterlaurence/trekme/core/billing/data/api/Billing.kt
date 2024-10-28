@@ -46,7 +46,7 @@ import java.util.UUID
  */
 class Billing(
     val application: Application,
-    private val purchaseSKU: PurchaseSKU,
+    private val purchaseIds: PurchaseIds,
     private val purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
 ) : BillingApi {
@@ -56,6 +56,9 @@ class Billing(
     override val purchaseAcknowledgedEvent =
         MutableSharedFlow<Unit>(0, 1, BufferOverflow.DROP_OLDEST)
 
+    /**
+     * seems to stay uninitialized...
+     */
     private lateinit var purchasePendingCallback: () -> Unit
 
     private var connected = false
@@ -73,7 +76,7 @@ class Billing(
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (purchases != null && billingResult.responseCode == OK) {
             purchases.forEach { purchase ->
-                if (purchase.products.any { id -> id == purchaseSKU.oneTimeId || id in purchaseSKU.subIdList }) {
+                if (purchase.products.any { id -> id == purchaseIds.oneTimeId || id in purchaseIds.subIdList }) {
                     purchase.acknowledge(
                         billingClient,
                         onSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
@@ -134,8 +137,8 @@ class Billing(
             .build()
 
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeAcknowledge = inAppPurchases.purchases.getOneTimePurchase()?.run {
-            if (shouldAcknowledgePurchase(purchaseSKU)) {
+        val oneTimeAcknowledge = inAppPurchases.purchases.getOneTimePurchase(purchaseIds)?.run {
+            if (shouldAcknowledge(purchaseIds)) {
                 acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
@@ -144,8 +147,8 @@ class Billing(
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         val subPurchases = queryPurchases(subQuery)
-        val subAcknowledge = subPurchases.purchases.getSubPurchase()?.run {
-            if (shouldAcknowledgeSubPurchase(purchaseSKU)) {
+        val subAcknowledge = subPurchases.purchases.getSubPurchase(purchaseIds)?.run {
+            if (shouldAcknowledgeSub(purchaseIds)) {
                 acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
@@ -160,7 +163,7 @@ class Billing(
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeLicense = inAppPurchases.purchases.getValidOneTimePurchase()?.let {
+        val oneTimeLicense = inAppPurchases.purchases.getValidOneTimePurchase(purchaseIds)?.let {
             if (purchaseVerifier.checkTime(
                     it.purchaseTime.millis,
                     Date().time.millis
@@ -176,29 +179,8 @@ class Billing(
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
             val subs = queryPurchases(subQuery)
-            subs.purchases.getValidSubPurchase() != null
+            subs.purchases.getValidSubPurchase(purchaseIds) != null
         } else true
-    }
-
-    // TODO - add Credentials parameter and pass further filtering down into Purchase extension function
-    // TODO - move into Purchase extension, add typealias
-    private fun List<Purchase>.getOneTimePurchase(): Purchase? {
-        return firstOrNull { it.products.any { id -> id == purchaseSKU.oneTimeId } }
-    }
-
-    private fun List<Purchase>.getSubPurchase(): Purchase? {
-        return firstOrNull { it.products.any { id -> id in purchaseSKU.subIdList } }
-    }
-
-    private fun List<Purchase>.getValidOneTimePurchase(): Purchase? {
-        return firstOrNull { it.products.any { id -> id == purchaseSKU.oneTimeId } && it.isAcknowledged }
-    }
-
-    private fun List<Purchase>.getValidSubPurchase(): Purchase? {
-        return firstOrNull {
-            it.products.any { id -> id in purchaseSKU.subIdList } &&
-                it.isAcknowledged
-        }
     }
 
     private fun consume(token: String) {
@@ -214,7 +196,7 @@ class Billing(
      */
     // FIXME - use typed result as a return type instead of exceptions
     override suspend fun getSubDetails(index: Int): SubscriptionDetails {
-        val subId = purchaseSKU.subIdList.getOrNull(index) ?: error("no sku for index $index")
+        val subId = purchaseIds.subIdList.getOrNull(index) ?: error("no sku for index $index")
         awaitConnect()
         val (billingResult, skuDetailsList) = querySubDetails(subId)
         return when (billingResult.responseCode) {
