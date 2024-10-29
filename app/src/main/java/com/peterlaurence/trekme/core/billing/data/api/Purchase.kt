@@ -65,32 +65,44 @@ fun Purchase.containsSub(purchaseIds: PurchaseIds): Boolean =
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
-class OneTimePurchase(val purchase: Purchase)
-
-class SubPurchase(val purchase: Purchase)
-
-class ValidOneTimePurchase(val purchase: Purchase)
-
-class ValidSubPurchase(val purchase: Purchase)
-
-typealias PurchaseList = List<Purchase>
-
-fun PurchaseList.getOneTimePurchase(purchaseIds: PurchaseIds): OneTimePurchase? =
-    firstOrNull { it.containsOneTime(purchaseIds) }?.let {
-        OneTimePurchase(it)
+// TODO - rename as queryWith
+class OneTimePurchase(val purchase: Purchase) {
+    companion object {
+        fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): OneTimePurchase? =
+            queryResult.purchases.firstOrNull { it.containsOneTime(purchaseIds) }?.let {
+                OneTimePurchase(it)
+            }
     }
+}
 
-fun PurchaseList.getSubPurchase(purchaseIds: PurchaseIds): SubPurchase? =
-    firstOrNull { it.containsSub(purchaseIds) }?.let {
-        SubPurchase(it)
+class SubPurchase(val purchase: Purchase) {
+    companion object {
+        fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): SubPurchase? =
+            queryResult.purchases.firstOrNull { it.containsSub(purchaseIds) }?.let {
+                SubPurchase(it)
+            }
     }
+}
 
-fun PurchaseList.getValidOneTimePurchase(purchaseIds: PurchaseIds): ValidOneTimePurchase? =
-    firstOrNull { it.containsOneTime(purchaseIds) && it.isAcknowledged }?.let {
-        ValidOneTimePurchase(it)
+class ValidOneTimePurchase(val purchase: Purchase) {
+    companion object {
+        fun from(
+            queryResult: PurchasesQueriedResult,
+            purchaseIds: PurchaseIds,
+        ): ValidOneTimePurchase? =
+            queryResult.purchases.firstOrNull { it.containsOneTime(purchaseIds) && it.isAcknowledged }
+                ?.let {
+                    ValidOneTimePurchase(it)
+                }
     }
+}
 
-fun PurchaseList.getValidSubPurchase(purchaseIds: PurchaseIds): ValidSubPurchase? =
-    firstOrNull { it.containsSub(purchaseIds) && it.isAcknowledged }?.let {
-        ValidSubPurchase(it)
+class ValidSubPurchase(val purchase: Purchase) {
+    companion object {
+        fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): ValidSubPurchase? =
+            queryResult.purchases.firstOrNull { it.containsSub(purchaseIds) && it.isAcknowledged }
+                ?.let {
+                    ValidSubPurchase(it)
+                }
     }
+}

@@ -138,7 +138,7 @@ class Billing(
         val inAppPurchases = queryPurchases(inAppQuery)
 
         val oneTimeAcknowledge =
-            inAppPurchases.purchases.getOneTimePurchase(purchaseIds)?.run {
+            OneTimePurchase.from(inAppPurchases, purchaseIds)?.run {
                 with(purchase) {
                     if (purchasedButNotAcknowledged) {
                         acknowledgeByBillingSuspended(billingClient)
@@ -152,7 +152,7 @@ class Billing(
         val subPurchases = queryPurchases(subQuery)
 
         val subAcknowledge =
-            subPurchases.purchases.getSubPurchase(purchaseIds)?.run {
+            SubPurchase.from(subPurchases, purchaseIds)?.run {
                 with(purchase) {
                     if (purchasedButNotAcknowledged) {
                         acknowledgeByBillingSuspended(billingClient)
@@ -174,17 +174,15 @@ class Billing(
             .build()
         val inAppPurchases = queryPurchases(inAppQuery)
 
-        val oneTimeLicense = inAppPurchases.purchases.getValidOneTimePurchase(purchaseIds)?.run {
-            with(purchase) {
-                if (purchaseVerifier.checkTime(
-                        purchaseTime.millis,
-                        Date().time.millis
-                    ) !is AccessGranted
-                ) {
-                    consume(purchaseToken)
-                    null
-                } else this
-            }
+        val oneTimeLicense = ValidOneTimePurchase.from(inAppPurchases, purchaseIds)?.run {
+            if (purchaseVerifier.checkTime(
+                    purchase.purchaseTime.millis,
+                    Date().time.millis
+                ) !is AccessGranted
+            ) {
+                consume(purchase.purchaseToken)
+                null
+            } else this
         }
 
         return if (oneTimeLicense == null) {
@@ -193,8 +191,10 @@ class Billing(
                 .build()
             val subPurchases = queryPurchases(subQuery)
 
-            subPurchases.purchases.getValidSubPurchase(purchaseIds) != null
-        } else true
+            ValidSubPurchase.from(subPurchases, purchaseIds) != null
+        } else {
+            true
+        }
 
     }
 
@@ -358,14 +358,14 @@ class Billing(
         val productDetailsList: List<ProductDetails>,
     )
 
-    /**
-     * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
-     */
-    private data class PurchasesQueriedResult(
-        val billingResult: BillingResult,
-        val purchases: List<Purchase>,
-    )
-
 }
+
+/**
+ * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
+ */
+data class PurchasesQueriedResult(
+    val billingResult: BillingResult,
+    val purchases: List<Purchase>,
+)
 
 private const val TAG = "Billing.kt"
