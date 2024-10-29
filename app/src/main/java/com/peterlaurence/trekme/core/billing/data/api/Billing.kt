@@ -135,27 +135,37 @@ class Billing(
         val inAppQuery = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
-
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeAcknowledge = inAppPurchases.purchases.getOneTime(purchaseIds)?.run {
-            if (shouldAcknowledgeOneTime(purchaseIds)) {
-                acknowledgeByBillingSuspended(billingClient)
-            } else false
-        } ?: false
+
+        val oneTimeAcknowledge =
+            inAppPurchases.purchases.getOneTimePurchase(purchaseIds)?.run {
+                with(purchase) {
+                    if (purchasedButNotAcknowledged) {
+                        acknowledgeByBillingSuspended(billingClient)
+                    } else false
+                }
+            } ?: false
 
         val subQuery = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         val subPurchases = queryPurchases(subQuery)
-        val subAcknowledge = subPurchases.purchases.getSub(purchaseIds)?.run {
-            if (shouldAcknowledgeSub(purchaseIds)) {
-                acknowledgeByBillingSuspended(billingClient)
-            } else false
-        } ?: false
+
+        val subAcknowledge =
+            subPurchases.purchases.getSubPurchase(purchaseIds)?.run {
+                with(purchase) {
+                    if (purchasedButNotAcknowledged) {
+                        acknowledgeByBillingSuspended(billingClient)
+                    } else false
+                }
+            } ?: false
 
         return oneTimeAcknowledge || subAcknowledge
     }
 
+    /**
+     * Also has a side effect of consuming not granted one time licenses...
+     */
     override suspend fun isPurchased(): Boolean {
         runCatching { awaitConnect() }.onFailure { return false }
 
@@ -163,24 +173,29 @@ class Billing(
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeLicense = inAppPurchases.purchases.getValidOneTime(purchaseIds)?.let {
-            if (purchaseVerifier.checkTime(
-                    it.purchaseTime.millis,
-                    Date().time.millis
-                ) !is AccessGranted
-            ) {
-                consume(it.purchaseToken)
-                null
-            } else it
+
+        val oneTimeLicense = inAppPurchases.purchases.getValidOneTimePurchase(purchaseIds)?.run {
+            with(purchase) {
+                if (purchaseVerifier.checkTime(
+                        purchaseTime.millis,
+                        Date().time.millis
+                    ) !is AccessGranted
+                ) {
+                    consume(purchaseToken)
+                    null
+                } else this
+            }
         }
 
         return if (oneTimeLicense == null) {
             val subQuery = QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
-            val subs = queryPurchases(subQuery)
-            subs.purchases.getValidSub(purchaseIds) != null
+            val subPurchases = queryPurchases(subQuery)
+
+            subPurchases.purchases.getValidSubPurchase(purchaseIds) != null
         } else true
+
     }
 
     private fun consume(token: String) {

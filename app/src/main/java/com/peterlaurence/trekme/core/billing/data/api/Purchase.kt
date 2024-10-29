@@ -65,25 +65,32 @@ fun Purchase.containsSub(purchaseIds: PurchaseIds): Boolean =
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
-fun Purchase.shouldAcknowledgeOneTime(purchaseIds: PurchaseIds): Boolean =
-    purchasedButNotAcknowledged && containsOneTime(purchaseIds)
+class OneTimePurchase(val purchase: Purchase)
 
-fun Purchase.shouldAcknowledgeSub(purchaseIds: PurchaseIds): Boolean =
-    purchasedButNotAcknowledged && containsSub(purchaseIds)
+class SubPurchase(val purchase: Purchase)
 
-// TODO - separate into two classes RegularPurchase, SubPurchase ?
+class ValidOneTimePurchase(val purchase: Purchase)
+
+class ValidSubPurchase(val purchase: Purchase)
 
 typealias PurchaseList = List<Purchase>
 
-fun PurchaseList.getOneTime(purchaseIds: PurchaseIds): Purchase? =
-    firstOrNull { it.containsOneTime(purchaseIds) }
+fun PurchaseList.getOneTimePurchase(purchaseIds: PurchaseIds): OneTimePurchase? =
+    firstOrNull { it.containsOneTime(purchaseIds) }?.let {
+        OneTimePurchase(it)
+    }
 
-fun PurchaseList.getSub(purchaseIds: PurchaseIds): Purchase? =
-    firstOrNull { it.containsSub(purchaseIds) }
+fun PurchaseList.getSubPurchase(purchaseIds: PurchaseIds): SubPurchase? =
+    firstOrNull { it.containsSub(purchaseIds) }?.let {
+        SubPurchase(it)
+    }
 
-fun PurchaseList.getValidOneTime(purchaseIds: PurchaseIds): Purchase? =
-    firstOrNull { it.containsOneTime(purchaseIds) && it.isAcknowledged }
+fun PurchaseList.getValidOneTimePurchase(purchaseIds: PurchaseIds): ValidOneTimePurchase? =
+    firstOrNull { it.containsOneTime(purchaseIds) && it.isAcknowledged }?.let {
+        ValidOneTimePurchase(it)
+    }
 
-fun PurchaseList.getValidSub(purchaseIds: PurchaseIds): Purchase? =
-    firstOrNull { it.containsSub(purchaseIds) && it.isAcknowledged }
-
+fun PurchaseList.getValidSubPurchase(purchaseIds: PurchaseIds): ValidSubPurchase? =
+    firstOrNull { it.containsSub(purchaseIds) && it.isAcknowledged }?.let {
+        ValidSubPurchase(it)
+    }
