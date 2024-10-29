@@ -56,41 +56,34 @@ fun Purchase.acknowledgeByBilling(
     }
 }
 
-// TODO - products.any { oneTime / sub } extract as a function
+fun Purchase.containsOneTime(purchaseIds: PurchaseIds): Boolean =
+    products.any { id -> purchaseIds.containsOneTime(id) }
+
+fun Purchase.containsSub(purchaseIds: PurchaseIds): Boolean =
+    products.any { id -> purchaseIds.containsSub(id) }
 
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
-fun Purchase.shouldAcknowledge(purchaseIds: PurchaseIds): Boolean =
-    purchasedButNotAcknowledged &&
-        products.any { id -> purchaseIds.containsOneTime(id) }
+fun Purchase.shouldAcknowledgeOneTime(purchaseIds: PurchaseIds): Boolean =
+    purchasedButNotAcknowledged && containsOneTime(purchaseIds)
 
 fun Purchase.shouldAcknowledgeSub(purchaseIds: PurchaseIds): Boolean =
-    purchasedButNotAcknowledged &&
-        (products.any { id -> purchaseIds.containsSub(id) })
+    purchasedButNotAcknowledged && containsSub(purchaseIds)
 
 // TODO - separate into two classes RegularPurchase, SubPurchase ?
 
 typealias PurchaseList = List<Purchase>
 
-fun PurchaseList.getOneTimePurchase(purchaseIds: PurchaseIds): Purchase? {
-    return firstOrNull { it.products.any { id -> purchaseIds.containsOneTime(id) } }
-}
+fun PurchaseList.getOneTime(purchaseIds: PurchaseIds): Purchase? =
+    firstOrNull { it.containsOneTime(purchaseIds) }
 
-fun PurchaseList.getSubPurchase(purchaseIds: PurchaseIds): Purchase? {
-    return firstOrNull { it.products.any { id -> purchaseIds.containsSub(id) } }
-}
+fun PurchaseList.getSub(purchaseIds: PurchaseIds): Purchase? =
+    firstOrNull { it.containsSub(purchaseIds) }
 
-fun PurchaseList.getValidOneTimePurchase(purchaseIds: PurchaseIds): Purchase? {
-    return firstOrNull {
-        it.products.any { id -> purchaseIds.containsOneTime(id) } &&
-            it.isAcknowledged
-    }
-}
+fun PurchaseList.getValidOneTime(purchaseIds: PurchaseIds): Purchase? =
+    firstOrNull { it.containsOneTime(purchaseIds) && it.isAcknowledged }
 
-fun PurchaseList.getValidSubPurchase(purchaseIds: PurchaseIds): Purchase? {
-    return firstOrNull {
-        it.products.any { id -> purchaseIds.containsSub(id) } &&
-            it.isAcknowledged
-    }
-}
+fun PurchaseList.getValidSub(purchaseIds: PurchaseIds): Purchase? =
+    firstOrNull { it.containsSub(purchaseIds) && it.isAcknowledged }
+

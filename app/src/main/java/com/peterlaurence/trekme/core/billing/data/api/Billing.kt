@@ -137,8 +137,8 @@ class Billing(
             .build()
 
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeAcknowledge = inAppPurchases.purchases.getOneTimePurchase(purchaseIds)?.run {
-            if (shouldAcknowledge(purchaseIds)) {
+        val oneTimeAcknowledge = inAppPurchases.purchases.getOneTime(purchaseIds)?.run {
+            if (shouldAcknowledgeOneTime(purchaseIds)) {
                 acknowledgeByBillingSuspended(billingClient)
             } else false
         } ?: false
@@ -147,7 +147,7 @@ class Billing(
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         val subPurchases = queryPurchases(subQuery)
-        val subAcknowledge = subPurchases.purchases.getSubPurchase(purchaseIds)?.run {
+        val subAcknowledge = subPurchases.purchases.getSub(purchaseIds)?.run {
             if (shouldAcknowledgeSub(purchaseIds)) {
                 acknowledgeByBillingSuspended(billingClient)
             } else false
@@ -163,7 +163,7 @@ class Billing(
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         val inAppPurchases = queryPurchases(inAppQuery)
-        val oneTimeLicense = inAppPurchases.purchases.getValidOneTimePurchase(purchaseIds)?.let {
+        val oneTimeLicense = inAppPurchases.purchases.getValidOneTime(purchaseIds)?.let {
             if (purchaseVerifier.checkTime(
                     it.purchaseTime.millis,
                     Date().time.millis
@@ -179,7 +179,7 @@ class Billing(
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
             val subs = queryPurchases(subQuery)
-            subs.purchases.getValidSubPurchase(purchaseIds) != null
+            subs.purchases.getValidSub(purchaseIds) != null
         } else true
     }
 
