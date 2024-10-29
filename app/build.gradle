@@ -55,7 +55,7 @@ android {
     kotlinOptions {
         freeCompilerArgs = [
                 '-Xjvm-default=all-compatibility',
-                '-Xopt-in=androidx.compose.material.ExperimentalMaterialApi',
+                '-opt-in=androidx.compose.material.ExperimentalMaterialApi',
                 '-Xcontext-receivers'
         ]
     }
