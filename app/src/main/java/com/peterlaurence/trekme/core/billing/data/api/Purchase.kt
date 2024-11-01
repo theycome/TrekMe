@@ -66,6 +66,7 @@ val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
 // TODO - rename as queryWith
+// TODO - model as a sealed class hierarchy
 class OneTimePurchase(val purchase: Purchase) {
     companion object {
         fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): OneTimePurchase? =

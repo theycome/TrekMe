@@ -6,7 +6,6 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
-import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ConsumeParams
@@ -29,7 +28,6 @@ import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
@@ -61,18 +59,6 @@ class Billing(
      */
     private lateinit var purchasePendingCallback: () -> Unit
 
-    private var connected = false
-
-    private val connectionStateListener = object : BillingClientStateListener {
-        override fun onBillingSetupFinished(billingResult: BillingResult) {
-            connected = billingResult.responseCode == OK
-        }
-
-        override fun onBillingServiceDisconnected() {
-            connected = false
-        }
-    }
-
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (purchases != null && billingResult.responseCode == OK) {
             purchases.forEach { purchase ->
@@ -96,27 +82,12 @@ class Billing(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
         ).build()
 
+    private val connector = BillingConnector(billingClient)
+
     private fun callPurchasePendingCallback() {
         if (::purchasePendingCallback.isInitialized) {
             purchasePendingCallback()
         }
-    }
-
-    /**
-     * Attempts to connect the billing service. This function immediately returns.
-     * See also [awaitConnect], which suspends at most 10s.
-     * Don't try to make this a suspend function - the [billingClient] keeps a reference on the
-     * [BillingClientStateListener] so it would keep a reference on a continuation (leading to
-     * insidious memory leaks, depending on who invokes that suspending function).
-     * Done this way, we're sure that the [billingClient] only has a reference on this [Billing]
-     * instance.
-     */
-    private fun connectClient() {
-        if (billingClient.isReady) {
-            connected = true
-            return
-        }
-        billingClient.startConnection(connectionStateListener)
     }
 
     /**
@@ -130,7 +101,7 @@ class Billing(
      * @return Whether acknowledgment as done or not.
      */
     override suspend fun acknowledgePurchase(): Boolean {
-        runCatching { awaitConnect() }.onFailure { return false }
+        if (!connector.connect()) return false
 
         val inAppQuery = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
@@ -167,7 +138,7 @@ class Billing(
      * Also has a side effect of consuming not granted one time licenses...
      */
     override suspend fun isPurchased(): Boolean {
-        runCatching { awaitConnect() }.onFailure { return false }
+        if (!connector.connect()) return false
 
         val inAppQuery = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
@@ -212,7 +183,9 @@ class Billing(
     // FIXME - use typed result as a return type instead of exceptions
     override suspend fun getSubDetails(index: Int): SubscriptionDetails {
         val subId = purchaseIds.subIdList.getOrNull(index) ?: error("no sku for index $index")
-        awaitConnect()
+
+        if (!connector.connect()) error("failed to connect to billing")
+
         val (billingResult, skuDetailsList) = querySubDetails(subId)
         return when (billingResult.responseCode) {
             OK -> skuDetailsList.find { it.productId == subId }?.let {
@@ -222,25 +195,6 @@ class Billing(
             FEATURE_NOT_SUPPORTED -> throw NotSupportedException()
             SERVICE_DISCONNECTED -> error("should retry")
             else -> error("other error")
-        }
-    }
-
-    /**
-     * Suspends at most 10s (waits for billing client to connect).
-     * Since the [BillingClient] can only notify its state through the [connectionStateListener], we
-     * poll the [connected] status. Ideally, we would collect the billing client state flow...
-     */
-    // FIXME - encapsulate in BillingCLientWrapper, pass time as parameters with default values
-    private suspend fun awaitConnect() {
-        connectClient()
-
-        var awaited = 0
-        /* We wait at most 10 seconds */
-        while (awaited < 10000) {
-            if (connected) break else {
-                delay(10)
-                awaited += 10
-            }
         }
     }
 
