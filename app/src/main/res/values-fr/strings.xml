@@ -77,6 +77,11 @@
         \nL\'alerte est sonore et utilise le vibreur.
         \n\nQuand une carte contient des balises, un service est lancé en tâche de fond. C\'est ce qui permet de vous alerter.
     </string>
+    <string name="no_elevation_track">Cette trace n\'a pas d\'information d\'altitude.</string>
+    <string name="elevation_stats_not_significant">Les statistiques d\'altitude ne sont pas significatives.</string>
+    <!-- Map bottomsheet -->
+    <string name="elevation_profile">Profil d\'altitude</string>
+
     <string name="delete_marker_question">Supprimer le marker ?</string>
     <string name="mapview_show_speed">Afficher vitesse</string>
     <string name="km_h">km/h</string>
@@ -85,7 +90,7 @@
     <string name="km">km</string>
     <string name="m">m</string>
     <string name="mile">ml</string>
-    <string name="track_name_change">Entrez le nom de la trace</string>
+    <string name="track_name_change">Nom de la trace</string>
     <string name="track_rename_action">Renommer</string>
     <string name="mapview_orientation_enable">Afficher l\'orientation</string>
     <string name="extraction_error">Erreur d\'extraction</string>

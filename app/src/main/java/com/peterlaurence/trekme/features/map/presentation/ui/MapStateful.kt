@@ -13,27 +13,50 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.AnchoredDraggableState
-import androidx.compose.foundation.gestures.DraggableAnchors
-import androidx.compose.foundation.gestures.snapTo
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.Hyphens
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,8 +64,6 @@ import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.georecord.domain.model.GeoStatistics
 import com.peterlaurence.trekme.core.location.domain.model.Location
 import com.peterlaurence.trekme.core.settings.RotationMode
-import com.peterlaurence.trekme.features.common.presentation.ui.bottomsheet.BottomSheetCustom
-import com.peterlaurence.trekme.features.common.presentation.ui.bottomsheet.DragHandle
 import com.peterlaurence.trekme.features.common.presentation.ui.bottomsheet.States
 import com.peterlaurence.trekme.features.common.presentation.ui.screens.LoadingScreen
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme
@@ -53,10 +74,21 @@ import com.peterlaurence.trekme.features.map.presentation.events.BeaconEditEvent
 import com.peterlaurence.trekme.features.map.presentation.events.ExcursionWaypointEditEvent
 import com.peterlaurence.trekme.features.map.presentation.events.ItineraryEvent
 import com.peterlaurence.trekme.features.map.presentation.events.MarkerEditEvent
-import com.peterlaurence.trekme.features.map.presentation.ui.components.*
+import com.peterlaurence.trekme.features.map.presentation.ui.bottomsheet.BottomSheet
+import com.peterlaurence.trekme.features.map.presentation.ui.components.CompassComponent
+import com.peterlaurence.trekme.features.map.presentation.ui.components.MapTopAppBar
+import com.peterlaurence.trekme.features.map.presentation.ui.components.RecordingButtons
+import com.peterlaurence.trekme.features.map.presentation.ui.components.StatsPanel
+import com.peterlaurence.trekme.features.map.presentation.ui.components.statsPanelHeight
 import com.peterlaurence.trekme.features.map.presentation.ui.screens.ErrorScaffold
 import com.peterlaurence.trekme.features.map.presentation.ui.screens.MapScreen
-import com.peterlaurence.trekme.features.map.presentation.viewmodel.*
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.Error
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.GpxRecordServiceViewModel
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.Loading
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.MapEvent
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.MapUiState
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.MapViewModel
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.StatisticsViewModel
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.TrackFollowLayer
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.BatteryOptimSolutionDialog
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.BatteryOptimWarningDialog
@@ -66,7 +98,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import ovh.plrapps.mapcompose.api.rotation
-import java.util.*
+import java.util.UUID
 
 @Composable
 fun MapStateful(
@@ -92,8 +124,9 @@ fun MapStateful(
     val isShowingGpsData by viewModel.isShowingGpsDataFlow().collectAsState(initial = false)
     val isShowingScaleIndicator by viewModel.settings.getShowScaleIndicator()
         .collectAsState(initial = true)
-    val isShowingZoomIndicator by viewModel.settings.getShowZoomIndicator().collectAsState(initial = false)
-    val stats by statisticsViewModel.stats.collectAsState(initial = null)
+    val isShowingZoomIndicator by viewModel.settings.getShowZoomIndicator()
+        .collectAsState(initial = false)
+    val recordingStats by statisticsViewModel.stats.collectAsState(initial = null)
     val rotationMode by viewModel.settings.getRotationMode()
         .collectAsState(initial = RotationMode.NONE)
 
@@ -126,9 +159,13 @@ fun MapStateful(
     val itineraryError = stringResource(id = R.string.itinerary_error)
     val ok = stringResource(id = R.string.ok_dialog)
     LaunchedEffectWithLifecycle(flow = viewModel.placeableEvents) { event ->
-        when(event) {
+        when (event) {
             is MarkerEditEvent -> onNavigateToMarkerEdit(event.marker.id, event.mapId)
-            is ExcursionWaypointEditEvent -> onNavigateToExcursionWaypointEdit(event.waypoint.id, event.excursionId)
+            is ExcursionWaypointEditEvent -> onNavigateToExcursionWaypointEdit(
+                event.waypoint.id,
+                event.excursionId
+            )
+
             is BeaconEditEvent -> onNavigateToBeaconEdit(event.beacon.id, event.mapId)
             is ItineraryEvent -> {
                 val success = itineraryToMarker(event.latitude, event.longitude, context)
@@ -182,14 +219,27 @@ fun MapStateful(
             snackbarHostState.currentSnackbarData?.dismiss()
         }
         when (event) {
-            MapEvent.CURRENT_LOCATION_OUT_OF_BOUNDS -> showSnackbar(scope, snackbarHostState, outOfBounds, ok)
+            MapEvent.CURRENT_LOCATION_OUT_OF_BOUNDS -> showSnackbar(
+                scope = scope,
+                snackbarHostState = snackbarHostState,
+                msg = outOfBounds,
+                okString = ok
+            )
+
             MapEvent.AWAITING_LOCATION -> {
                 val awaitingLocation = context.getString(R.string.awaiting_location)
                 showSnackbar(scope, snackbarHostState, awaitingLocation, ok)
             }
+
             MapEvent.TRACK_TO_FOLLOW_SELECTED -> dismissSnackbar()
             MapEvent.TRACK_TO_FOLLOW_ALREADY_RUNNING -> {
                 showTrackFollowDialog = true
+            }
+
+            MapEvent.SHOW_TRACK_BOTTOM_SHEET -> {
+                scope.launch {
+                    anchoredDraggableState.animateTo(States.PEAKED)
+                }
             }
         }
     }
@@ -221,18 +271,21 @@ fun MapStateful(
                 val screenHeightPx = with(LocalDensity.current) {
                     screenHeightDp.toPx()
                 }
-                val navBarHeightDp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                val navBarHeightDp =
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 val navBarHeightPx = with(LocalDensity.current) {
                     navBarHeightDp.toPx()
                 }
-                val geoStatisticsBannerHeight = with(LocalDensity.current) {
-                    30.dp.toPx()
+
+                // The height of the banner which appears during a recording
+                val recordingBannerHeight = with(LocalDensity.current) {
+                    statsPanelHeight.toPx()
                 }
 
-                val bottomSheetOffset by remember(screenHeightPx, stats) {
+                val bottomSheetOffset by remember(screenHeightPx, recordingStats) {
                     derivedStateOf {
                         if (anchoredDraggableState.currentValue == States.COLLAPSED) {
-                            if (stats != null) geoStatisticsBannerHeight else 0f
+                            if (recordingStats != null) recordingBannerHeight else 0f
                         } else {
                             val offset = anchoredDraggableState.offset
                             if (!offset.isNaN()) {
@@ -242,6 +295,17 @@ fun MapStateful(
                     }
                 }
 
+                LaunchedEffect(anchoredDraggableState.currentValue) {
+                    val ratio = when (anchoredDraggableState.currentValue) {
+                        States.EXPANDED -> expandedRatio
+                        States.PEAKED -> peakedRatio
+                        States.COLLAPSED -> 0f
+                    }
+                    viewModel.bottomSheetLayer.onBottomPadding(
+                        bottom = screenHeightDp * ratio,
+                        withCenter = ratio == expandedRatio
+                    )
+                }
 
                 /* Always use the light theme background (dark theme or not). Done this way, it
                  * doesn't add a GPU overdraw. */
@@ -261,7 +325,7 @@ fun MapStateful(
                         rotationMode,
                         locationFlow,
                         elevationFix,
-                        geoStatistics = stats,
+                        geoStatistics = recordingStats,
                         hasElevationFix = purchased,
                         hasBeacons = purchased,
                         hasTrackFollow = purchased,
@@ -290,8 +354,21 @@ fun MapStateful(
                     )
                 }
 
+                val bottomSheetState by viewModel.bottomSheetLayer.state.collectAsState()
                 if (anchoredDraggableState.currentValue != States.COLLAPSED) {
-                    BottomSheet(anchoredDraggableState, screenHeightDp, screenHeightPx)
+                    BottomSheet(
+                        anchoredDraggableState = anchoredDraggableState,
+                        screenHeightDp = screenHeightDp,
+                        screenHeightPx = screenHeightPx,
+                        expandedRatio = expandedRatio,
+                        peakedRatio = peakedRatio,
+                        bottomSheetState = bottomSheetState,
+                        onCursorMove = { latLon, d, ele ->
+                            viewModel.calloutLayer.setCursor(latLon, distance = d, ele = ele)
+                        },
+                        onColorChange = viewModel.bottomSheetLayer::onColorChange,
+                        onTitleChange = viewModel.bottomSheetLayer::onTitleChange
+                    )
                 }
             }
         }
@@ -416,7 +493,14 @@ private fun MapScaffold(
     recordingButtons: @Composable () -> Unit
 ) {
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                modifier = Modifier.graphicsLayer {
+                    translationY = -bottomSheetOffset
+                },
+                hostState = snackbarHostState
+            )
+        },
         topBar = {
             MapTopAppBar(
                 title = name,
@@ -496,48 +580,6 @@ private fun MapScaffold(
 }
 
 @Composable
-private fun BottomSheet(
-    anchoredDraggableState: AnchoredDraggableState<States>,
-    screenHeightDp: Dp,
-    screenHeightPx: Float
-) {
-    val expandedRatio = 0.5f
-    val peakedRatio = 0.3f
-
-    val anchors = remember {
-        DraggableAnchors {
-            States.EXPANDED at screenHeightPx * (1 - expandedRatio)
-            States.PEAKED at screenHeightPx * (1 - peakedRatio)
-            States.COLLAPSED at screenHeightPx
-        }
-    }
-
-    SideEffect {
-        anchoredDraggableState.updateAnchors(anchors)
-    }
-
-    BottomSheetCustom(
-        state = anchoredDraggableState,
-        fullHeight = screenHeightDp * expandedRatio,
-        header = {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                DragHandle()
-            }
-        },
-        content = {
-            repeat(10) {
-                item(it) {
-                    Text("Hello", color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
-        }
-    )
-}
-
-@Composable
 private fun RecordingFabStateful(viewModel: GpxRecordServiceViewModel) {
     val gpxRecordState by viewModel.status.collectAsState()
     var isShowingBatteryWarning by rememberSaveable { mutableStateOf(false) }
@@ -597,7 +639,7 @@ private fun getDisplayRotation(): Int {
         LocalContext.current.getActivityOrNull()?.windowManager?.defaultDisplay?.rotation
             ?: Surface.ROTATION_0
     } else {
-        LocalContext.current.display?.rotation ?: Surface.ROTATION_0
+        LocalContext.current.display.rotation
     }
 
     return when (surfaceRotation) {
@@ -619,3 +661,6 @@ fun showSnackbar(
 
     snackbarHostState.showSnackbar(msg, actionLabel = okString)
 }
+
+private const val expandedRatio = 0.5f
+private const val peakedRatio = 0.3f

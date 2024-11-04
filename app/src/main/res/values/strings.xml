@@ -224,7 +224,7 @@
     <string name="import_tracks_warning">The file you chose is not in a supported format. Supported extensions are :</string>
     <string name="import_tracks_format_gpx" translatable="false">GPX (tracks, routes, waypoints)</string>
     <string name="import_tracks_format_google" translatable="false">Google Maps directions (XML, JSON)</string>
-    <string name="track_name_change">Enter the name of the track</string>
+    <string name="track_name_change">Track name</string>
     <string name="track_rename_action">Rename</string>
     <string name="go_to_track_on_map">See on the map</string>
     <string name="track_file_name_change">File name</string>
@@ -320,6 +320,10 @@
         The beacon radius is 100m by default, but can be changed.\nThe alert is a sonar sound effect and a vibration.
         \n\nWhen a map has beacons, a service runs in the background. The purpose of this service is to alert you when you get close to a beacon.
     </string>
+    <string name="no_elevation_track">This track has no elevation data.</string>
+    <string name="elevation_stats_not_significant">Elevation statistics are\'t significant.</string>
+    <!-- Map bottomsheet -->
+    <string name="elevation_profile">Elevation profile</string>
 
     <!-- Record list -->
     <string name="fragment_recording" translatable="false">FragmentRecording</string>

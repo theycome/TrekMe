@@ -29,6 +29,7 @@ class RouteLayer(
     private val routeInteractor: RouteInteractor,
     private val excursionInteractor: ExcursionInteractor,
     private val mapExcursionInteractor: MapExcursionInteractor,
+    private val onRouteClick: (route: Route, mapState: MapState, map: Map, excursionData: ExcursionData?) -> Unit,
 ) {
     val isShowingDistanceOnTrack = MutableStateFlow(false)
     private val staticRoutesData = MutableStateFlow(emptyMap<Route, RouteData>())
@@ -41,6 +42,7 @@ class RouteLayer(
             dataStateFlow.collectLatest { (_, mapState) ->
                 goToRouteFlow.collectLatest event@{ route ->
                     val routeData = staticRoutesData.value[route] ?: return@event
+                    mapState.setVisibleAreaPadding(bottomRatio = 0f)
                     mapState.scrollToBoundingBox(routeData.boundingBox)
                 }
             }
@@ -94,6 +96,37 @@ class RouteLayer(
                 }
             }
         }
+
+        scope.launch {
+            dataStateFlow.collect { (map, mapState) ->
+                mapState.onPathClick { id, _, _ ->
+                    /* First, check if this is actually a static route */
+                    val staticRouteEntry = staticRoutesData.value.entries.firstOrNull {
+                        it.value.ownerId == id
+                    }
+                    if (staticRouteEntry != null) {
+                        onRouteClick(staticRouteEntry.key, mapState, map, null)
+                    } else {
+                        /* Otherwise, it should be one of the routes of an excursion */
+                        val excursionDataMap = excursionRoutesData.value
+                        val excursionEntry = excursionDataMap.entries.firstOrNull {
+                            it.key.id == id
+                        } ?: return@onPathClick
+
+                        val excursionId = excursionEntry.value.ownerId
+                        val excursionEntries = excursionDataMap.entries.filter {
+                            it.value.ownerId == excursionId
+                        }
+                        if (excursionEntries.isNotEmpty()) {
+                            val routes = excursionEntries.map { it.key }
+                            val excursionRef = map.excursionRefs.value.firstOrNull { it.id == excursionId } ?: return@onPathClick
+                            val excursionData = ExcursionData(excursionRef, routes)
+                            onRouteClick(excursionEntry.key, mapState, map, excursionData)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private suspend fun listenForGoToExcursionEvent(
@@ -107,6 +140,7 @@ class RouteLayer(
             }.reduceOrNull { acc, b ->
                 acc + b
             } ?: return@event
+            mapState.setVisibleAreaPadding(bottomRatio = 0f)
             mapState.scrollToBoundingBox(boundingBox)
         }
     }
@@ -167,7 +201,7 @@ class RouteLayer(
                     if (visible) {
                         /* Only make route data if it wasn't already processed, or previously removed
                          * after visibility set to false. */
-                        val routeData = existing ?: makeRouteData(map, route, mapState)
+                        val routeData = existing ?: makeRouteData(map, route, mapState, ownerId = ref.id)
 
                         if (routeData != null && !mapState.hasPath(route.id)) {
                             excursionRoutesData.update {
@@ -241,7 +275,7 @@ class RouteLayer(
                 if (visible) {
                     /* Only make route data if it wasn't already processed, or previously removed
                      * after visibility set to false. */
-                    val routeData = existing ?: makeRouteData(map, route, mapState)
+                    val routeData = existing ?: makeRouteData(map, route, mapState, ownerId = route.id)
 
                     if (routeData != null && !mapState.hasPath(route.id)) {
                         staticRoutesData.update {
@@ -263,7 +297,7 @@ class RouteLayer(
         }
     }
 
-    private suspend fun makeRouteData(map: Map, route: Route, mapState: MapState): RouteData? {
+    private suspend fun makeRouteData(map: Map, route: Route, mapState: MapState, ownerId: String): RouteData? {
         val pathBuilder = mapState.makePathDataBuilder()
 
         var sumX = 0.0
@@ -296,7 +330,7 @@ class RouteLayer(
         } else null
 
         return if (pathData != null && barycenter != null && boundingBox != null) {
-            RouteData(pathData, barycenter, boundingBox)
+            RouteData(ownerId, pathData, barycenter, boundingBox)
         } else null
     }
 
@@ -306,7 +340,8 @@ class RouteLayer(
             pathData,
             color = route.color.value.let { colorStr ->
                 Color(parseColor(colorStr))
-            }
+            },
+            clickable = true
         )
     }
 
@@ -319,3 +354,5 @@ class RouteLayer(
         )
     }
 }
+
+data class ExcursionData(val excursionRef: ExcursionRef, val routes: List<Route>)

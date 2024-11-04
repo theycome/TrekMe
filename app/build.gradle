@@ -6,7 +6,7 @@ apply plugin: 'kotlinx-serialization'
 apply plugin: 'dagger.hilt.android.plugin'
 
 android {
-    compileSdk 34
+    compileSdk 35
 
     buildFeatures {
         compose true
@@ -21,8 +21,8 @@ android {
         applicationId "com.peterlaurence.trekme"
         minSdkVersion 24
         targetSdkVersion 35
-        versionCode 239
-        versionName "4.6.0"
+        versionCode 240
+        versionName "4.7.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,12 +63,12 @@ android {
 }
 
 dependencies {
-    def lifecycle_version = '2.8.6'
+    def lifecycle_version = '2.8.7'
 
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.2'
 //    implementation project(":mapcompose-local")  // for dev purposes
-    implementation 'ovh.plrapps:mapcompose:2.12.8'
+    implementation 'ovh.plrapps:mapcompose:2.12.11'
     implementation 'com.android.billingclient:billing:7.1.1'
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
@@ -80,7 +80,7 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.9.3'
 
     // Compose // see https://developer.android.com/jetpack/compose/setup#bom-version-mapping
-    implementation platform('androidx.compose:compose-bom:2024.10.00')
+    implementation platform('androidx.compose:compose-bom:2024.10.01')
     implementation "androidx.compose.ui:ui"
     implementation "androidx.compose.material:material"
     implementation "androidx.compose.material3:material3"

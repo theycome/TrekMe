@@ -6,6 +6,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.core.billing.domain.interactors.HasOneExtendedOfferInteractor
+import com.peterlaurence.trekme.core.excursion.domain.repository.ExcursionRepository
 import com.peterlaurence.trekme.core.location.domain.model.Location
 import com.peterlaurence.trekme.core.location.domain.model.LocationSource
 import com.peterlaurence.trekme.core.map.domain.interactors.ElevationFixInteractor
@@ -40,6 +41,8 @@ import com.peterlaurence.trekme.features.map.presentation.events.MapFeatureEvent
 import com.peterlaurence.trekme.features.map.presentation.events.MarkerEditEvent
 import com.peterlaurence.trekme.features.map.presentation.events.PlaceableEvent
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.BeaconLayer
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.BottomSheetLayer
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.CalloutLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.DistanceLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.DistanceLineState
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.ExcursionWaypointLayer
@@ -83,6 +86,7 @@ import ovh.plrapps.mapcompose.api.onMarkerLongPress
 import ovh.plrapps.mapcompose.api.reloadTiles
 import ovh.plrapps.mapcompose.api.rotateTo
 import ovh.plrapps.mapcompose.api.scale
+import ovh.plrapps.mapcompose.api.setScrollOffsetRatio
 import ovh.plrapps.mapcompose.ui.state.MapState
 import java.util.UUID
 import javax.inject.Inject
@@ -99,6 +103,7 @@ class MapViewModel @Inject constructor(
     routeInteractor: RouteInteractor,
     excursionInteractor: ExcursionInteractor,
     mapExcursionInteractor: MapExcursionInteractor,
+    excursionRepository: ExcursionRepository,
     private val trackFollowRepository: TrackFollowRepository,
     private val mapComposeTileStreamProviderInteractor: MapComposeTileStreamProviderInteractor,
     val settings: Settings,
@@ -223,6 +228,21 @@ class MapViewModel @Inject constructor(
         dataStateFlow,
     )
 
+    val bottomSheetLayer = BottomSheetLayer(
+        viewModelScope,
+        dataStateFlow,
+        excursionRepository = excursionRepository,
+        mapInteractor = mapInteractor,
+        mapExcursionInteractor = mapExcursionInteractor,
+        routeInteractor = routeInteractor
+    )
+
+    val calloutLayer = CalloutLayer(
+        scope = viewModelScope,
+        dataStateFlow = dataStateFlow,
+        mapInteractor = mapInteractor,
+    )
+
     val routeLayer = RouteLayer(
         scope = viewModelScope,
         dataStateFlow = dataStateFlow,
@@ -230,7 +250,16 @@ class MapViewModel @Inject constructor(
         goToExcursionFlow = mapFeatureEvents.goToExcursion,
         routeInteractor = routeInteractor,
         excursionInteractor = excursionInteractor,
-        mapExcursionInteractor = mapExcursionInteractor
+        mapExcursionInteractor = mapExcursionInteractor,
+        onRouteClick = { route, mapState, map, excursionData ->
+            val handled = trackFollowLayer.handleOnPathClick(route.id, mapState, map)
+            if (!handled) {
+                viewModelScope.launch {
+                    _events.send(MapEvent.SHOW_TRACK_BOTTOM_SHEET)
+                }
+                bottomSheetLayer.setData(route, excursionData)
+            }
+        },
     )
 
     val liveRouteLayer = LiveRouteLayer(dataStateFlow, routeInteractor, gpxRecordEvents)
@@ -353,6 +382,7 @@ class MapViewModel @Inject constructor(
             highFidelityColors(false)
         }.apply {
             addLayer(tileStreamProvider)
+            setScrollOffsetRatio(0.5f, 0.5f)
         }
 
         /* region Configuration */
@@ -425,5 +455,6 @@ enum class MapEvent {
     CURRENT_LOCATION_OUT_OF_BOUNDS,
     AWAITING_LOCATION,
     TRACK_TO_FOLLOW_SELECTED,
-    TRACK_TO_FOLLOW_ALREADY_RUNNING
+    TRACK_TO_FOLLOW_ALREADY_RUNNING,
+    SHOW_TRACK_BOTTOM_SHEET
 }
