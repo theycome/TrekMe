@@ -14,7 +14,6 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
-import com.android.billingclient.api.QueryPurchasesParams
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
@@ -84,6 +83,13 @@ class Billing(
 
     private val connector = BillingConnector(billingClient)
 
+    private val wrapper = BillingClientWrapper(
+        application,
+        purchaseIds,
+        onPurchaseSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
+        onPurchasePending = { callPurchasePendingCallback() },
+    )
+
     private fun callPurchasePendingCallback() {
         if (::purchasePendingCallback.isInitialized) {
             purchasePendingCallback()
@@ -98,40 +104,24 @@ class Billing(
      * So we can end up with a purchase which is in [Purchase.PurchaseState.PURCHASED] state but not
      * acknowledged.
      *
-     * @return Whether acknowledgment as done or not.
+     * @return Whether acknowledgment was done or not.
      */
     override suspend fun acknowledgePurchase(): Boolean {
         if (!connector.connect()) return false
 
-        val inAppQuery = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
-            .build()
-        val inAppPurchases = queryPurchases(inAppQuery)
+        val oneTimeAcknowledged =
+            wrapper
+                .queryInAppPurchases()
+                .getPurchase(PurchaseType.ONE_TIME, purchaseIds)
+                ?.assureAcknowledgement(billingClient) ?: false
 
-        val oneTimeAcknowledge =
-            OneTimePurchase.from(inAppPurchases, purchaseIds)?.run {
-                with(purchase) {
-                    if (purchasedButNotAcknowledged) {
-                        acknowledgeByBillingSuspended(billingClient)
-                    } else false
-                }
-            } ?: false
+        val subAcknowledged =
+            wrapper
+                .querySubPurchases()
+                .getPurchase(PurchaseType.SUB, purchaseIds)
+                ?.assureAcknowledgement(billingClient) ?: false
 
-        val subQuery = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.SUBS)
-            .build()
-        val subPurchases = queryPurchases(subQuery)
-
-        val subAcknowledge =
-            SubPurchase.from(subPurchases, purchaseIds)?.run {
-                with(purchase) {
-                    if (purchasedButNotAcknowledged) {
-                        acknowledgeByBillingSuspended(billingClient)
-                    } else false
-                }
-            } ?: false
-
-        return oneTimeAcknowledge || subAcknowledge
+        return oneTimeAcknowledged || subAcknowledged
     }
 
     /**
@@ -140,36 +130,25 @@ class Billing(
     override suspend fun isPurchased(): Boolean {
         if (!connector.connect()) return false
 
-        val inAppQuery = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
-            .build()
-        val inAppPurchases = queryPurchases(inAppQuery)
-
-        val oneTimeLicense = ValidOneTimePurchase.from(inAppPurchases, purchaseIds)?.run {
-            if (purchaseVerifier.checkTime(
-                    purchase.purchaseTime.millis,
-                    Date().time.millis
-                ) !is AccessGranted
-            ) {
-                consume(purchase.purchaseToken)
-                null
-            } else this
-        }
+        val oneTimeLicense = wrapper
+            .queryInAppPurchases()
+            .getPurchase(PurchaseType.VALID_ONE_TIME, purchaseIds)?.run {
+                if (purchaseVerifier
+                        .checkTime(purchaseTime.millis, Date().time.millis) !is AccessGranted
+                ) {
+                    consume(purchaseToken)
+                    null
+                } else this
+            }
 
         return if (oneTimeLicense == null) {
-            val subQuery = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build()
-            val subPurchases = queryPurchases(subQuery)
-
-            ValidSubPurchase.from(subPurchases, purchaseIds) != null
-        } else {
-            true
-        }
-
+            wrapper.querySubPurchases()
+                .getPurchase(PurchaseType.VALID_SUB, purchaseIds) != null
+        } else true
     }
 
     private fun consume(token: String) {
+        // FIXME - HERE
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(token).build()
         billingClient.consumeAsync(consumeParams) { _, _ ->
             Log.i(TAG, "Consumed the purchase. It can now be bought again.")
@@ -224,21 +203,6 @@ class Billing(
 
         awaitClose { /* We can't do anything, but it doesn't matter */ }
     }.first()
-
-    /**
-     * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
-     * the provided callback given to [BillingClient.queryPurchasesAsync] - so creating a memory
-     * leak.
-     * By collecting a [callbackFlow], the real collector is on a different call stack. So the
-     * [BillingClient] has no reference on the collector.
-     */
-    private suspend fun queryPurchases(params: QueryPurchasesParams): PurchasesQueriedResult =
-        callbackFlow {
-            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
-                trySend(PurchasesQueriedResult(billingResult, purchases))
-            }
-            awaitClose { /* We can't do anything, but it doesn't matter */ }
-        }.first()
 
     override fun launchBilling(
         id: UUID,
@@ -321,5 +285,10 @@ data class PurchasesQueriedResult(
     val billingResult: BillingResult,
     val purchases: List<Purchase>,
 )
+
+fun PurchasesQueriedResult.getPurchase(type: PurchaseType, purchaseIds: PurchaseIds): Purchase? =
+    purchases.firstOrNull {
+        type.comparator(it, purchaseIds)
+    }
 
 private const val TAG = "Billing.kt"

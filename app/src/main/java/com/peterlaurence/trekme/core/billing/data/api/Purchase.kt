@@ -29,6 +29,11 @@ fun Purchase.acknowledge(
     }
 }
 
+suspend fun Purchase.assureAcknowledgement(client: BillingClient): Boolean =
+    if (purchasedButNotAcknowledged) {
+        acknowledgeByBillingSuspended(client)
+    } else false
+
 /**
  * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
  * the provided callback given to [BillingClient.acknowledgePurchase] - so creating a memory
@@ -62,48 +67,26 @@ fun Purchase.containsOneTime(purchaseIds: PurchaseIds): Boolean =
 fun Purchase.containsSub(purchaseIds: PurchaseIds): Boolean =
     products.any { id -> purchaseIds.containsSub(id) }
 
+fun Purchase.containsOneTimeOrSub(purchaseIds: PurchaseIds): Boolean =
+    products.any { id -> purchaseIds.containsOneTime(id) || purchaseIds.containsSub(id) }
+
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
-// TODO - rename as queryWith
-// TODO - model as a sealed class hierarchy
-class OneTimePurchase(val purchase: Purchase) {
-    companion object {
-        fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): OneTimePurchase? =
-            queryResult.purchases.firstOrNull { it.containsOneTime(purchaseIds) }?.let {
-                OneTimePurchase(it)
-            }
-    }
-}
+private typealias PurchaseComparator = (Purchase, PurchaseIds) -> Boolean
 
-class SubPurchase(val purchase: Purchase) {
-    companion object {
-        fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): SubPurchase? =
-            queryResult.purchases.firstOrNull { it.containsSub(purchaseIds) }?.let {
-                SubPurchase(it)
-            }
-    }
-}
+enum class PurchaseType(val comparator: PurchaseComparator) {
 
-class ValidOneTimePurchase(val purchase: Purchase) {
-    companion object {
-        fun from(
-            queryResult: PurchasesQueriedResult,
-            purchaseIds: PurchaseIds,
-        ): ValidOneTimePurchase? =
-            queryResult.purchases.firstOrNull { it.containsOneTime(purchaseIds) && it.isAcknowledged }
-                ?.let {
-                    ValidOneTimePurchase(it)
-                }
-    }
-}
+    ONE_TIME(Purchase::containsOneTime),
 
-class ValidSubPurchase(val purchase: Purchase) {
-    companion object {
-        fun from(queryResult: PurchasesQueriedResult, purchaseIds: PurchaseIds): ValidSubPurchase? =
-            queryResult.purchases.firstOrNull { it.containsSub(purchaseIds) && it.isAcknowledged }
-                ?.let {
-                    ValidSubPurchase(it)
-                }
-    }
+    SUB(Purchase::containsSub),
+
+    VALID_ONE_TIME({ purchase, ids ->
+        purchase.containsOneTime(ids) && purchase.isAcknowledged
+    }),
+
+    VALID_SUB({ purchase, ids ->
+        purchase.containsSub(ids) && purchase.isAcknowledged
+    })
+
 }
