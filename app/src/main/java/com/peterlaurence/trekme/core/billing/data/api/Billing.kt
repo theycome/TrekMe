@@ -81,8 +81,6 @@ class Billing(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
         ).build()
 
-    private val connector = BillingConnector(billingClient)
-
     private val wrapper = BillingClientWrapper(
         application,
         purchaseIds,
@@ -107,17 +105,15 @@ class Billing(
      * @return Whether acknowledgment was done or not.
      */
     override suspend fun acknowledgePurchase(): Boolean {
-        if (!connector.connect()) return false
+        if (!wrapper.connect()) return false
 
         val oneTimeAcknowledged =
-            wrapper
-                .queryInAppPurchases()
+            wrapper.queryInAppPurchases()
                 .getPurchase(PurchaseType.ONE_TIME, purchaseIds)
                 ?.assureAcknowledgement(billingClient) ?: false
 
         val subAcknowledged =
-            wrapper
-                .querySubPurchases()
+            wrapper.querySubPurchases()
                 .getPurchase(PurchaseType.SUB, purchaseIds)
                 ?.assureAcknowledgement(billingClient) ?: false
 
@@ -128,18 +124,18 @@ class Billing(
      * Also has a side effect of consuming not granted one time licenses...
      */
     override suspend fun isPurchased(): Boolean {
-        if (!connector.connect()) return false
+        if (!wrapper.connect()) return false
 
-        val oneTimeLicense = wrapper
-            .queryInAppPurchases()
-            .getPurchase(PurchaseType.VALID_ONE_TIME, purchaseIds)?.run {
-                if (purchaseVerifier
-                        .checkTime(purchaseTime.millis, Date().time.millis) !is AccessGranted
-                ) {
-                    consume(purchaseToken)
-                    null
-                } else this
-            }
+        val oneTimeLicense =
+            wrapper.queryInAppPurchases()
+                .getPurchase(PurchaseType.VALID_ONE_TIME, purchaseIds)?.run {
+                    if (purchaseVerifier
+                            .checkTime(purchaseTime.millis, Date().time.millis) !is AccessGranted
+                    ) {
+                        consume(purchaseToken)
+                        null
+                    } else this
+                }
 
         return if (oneTimeLicense == null) {
             wrapper.querySubPurchases()
@@ -163,7 +159,7 @@ class Billing(
     override suspend fun getSubDetails(index: Int): SubscriptionDetails {
         val subId = purchaseIds.subIdList.getOrNull(index) ?: error("no sku for index $index")
 
-        if (!connector.connect()) error("failed to connect to billing")
+        if (!wrapper.connect()) error("failed to connect to billing")
 
         val (billingResult, skuDetailsList) = querySubDetails(subId)
         return when (billingResult.responseCode) {
