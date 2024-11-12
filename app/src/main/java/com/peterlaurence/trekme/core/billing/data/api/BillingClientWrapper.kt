@@ -8,12 +8,9 @@ import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryPurchasesParams
+import com.peterlaurence.trekme.util.callbackFlowWrapper
 import com.peterlaurence.trekme.util.datetime.Millis
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Created by Ivan Yakushev on 03.11.2024
@@ -65,20 +62,28 @@ class BillingClientWrapper(
         return queryPurchases(params)
     }
 
-    /**
-     * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
-     * the provided callback given to [BillingClient.queryPurchasesAsync] - so creating a memory
-     * leak.
-     * By collecting a [callbackFlow], the real collector is on a different call stack. So the
-     * [BillingClient] has no reference on the collector.
-     */
     private suspend fun queryPurchases(params: QueryPurchasesParams): PurchasesQueriedResult =
-        callbackFlow {
+        callbackFlowWrapper { emit ->
             client.queryPurchasesAsync(params) { billingResult, purchases ->
-                trySend(PurchasesQueriedResult(billingResult, purchases))
+                emit {
+                    PurchasesQueriedResult(billingResult, purchases)
+                }
             }
-            awaitClose { /* We can't do anything, but it doesn't matter */ }
-        }.first()
+        }()
+
+    // TODO - as a rework for a Purchase extension function
+//    private suspend fun acknowledgeByBillingSuspended(purchase: Purchase): Boolean =
+//        initiateCallback { scope ->
+//            val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
+//                .setPurchaseToken(purchase.purchaseToken)
+//                .build()
+//
+//            client.acknowledgePurchase(acknowledgePurchaseParams) {
+//                scope.callbackResult {
+//                    it.responseCode == OK
+//                }
+//            }
+//        }
 
     /**
      * Encapsulates connection functionality
