@@ -3,11 +3,8 @@ package com.peterlaurence.trekme.features.mapcreate.presentation.viewmodel
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.core.billing.di.IGN
@@ -113,11 +110,11 @@ class WmtsViewModel @Inject constructor(
 
     private val defaultIgnLayer = IgnClassic
     private val defaultOsmLayer = WorldStreetMap
+    private val defaultUsgsLayer = UsgsTopo
 
     private val areaController = AreaUiController()
     private var downloadFormData: DownloadFormData? = null
 
-    private val searchFieldState: MutableState<TextFieldValue> = mutableStateOf(TextFieldValue(""))
     private var hasPrimaryLayers = false
     private var hasOverlayLayers = false
 
@@ -134,6 +131,11 @@ class WmtsViewModel @Inject constructor(
      * flag to true. */
     private var shouldCenterOnNextLocation = true
 
+    private var lastSearch: String? = null
+    private var lastPlaces: List<GeoPlace>? = null
+
+    val isSearchPendingState = geocodingRepository.isLoadingFlow
+
     init {
         viewModelScope.launch {
             wmtsSourceRepository.wmtsSourceState.collectLatest { source ->
@@ -145,6 +147,7 @@ class WmtsViewModel @Inject constructor(
             if (_uiState.value is GeoplaceList) {
                 _uiState.value = GeoplaceList(places)
             }
+            lastPlaces = places
         }.launchIn(viewModelScope)
 
         _wmtsState.map {
@@ -354,7 +357,7 @@ class WmtsViewModel @Inject constructor(
 
     private fun updateTopBarConfig(wmtsSource: WmtsSource) {
         hasPrimaryLayers = when (wmtsSource) {
-            WmtsSource.IGN, WmtsSource.OPEN_STREET_MAP -> true
+            WmtsSource.IGN, WmtsSource.OPEN_STREET_MAP, WmtsSource.USGS -> true
             else -> false
         }
         hasOverlayLayers = wmtsSource == WmtsSource.IGN
@@ -369,6 +372,7 @@ class WmtsViewModel @Inject constructor(
                     it.sortedByDescending { l -> l == OsmAndHd }
                 } else it
             }
+            WmtsSource.USGS -> usgsLayersPrimary
             else -> null
         }
     }
@@ -380,6 +384,7 @@ class WmtsViewModel @Inject constructor(
         return when (wmtsSource) {
             WmtsSource.IGN -> getActivePrimaryIgnLayer()
             WmtsSource.OPEN_STREET_MAP -> getActivePrimaryOsmLayer()
+            WmtsSource.USGS -> getActivePrimaryUsgsLayer()
             else -> null
         }
     }
@@ -392,6 +397,10 @@ class WmtsViewModel @Inject constructor(
         return activePrimaryLayerForSource[WmtsSource.OPEN_STREET_MAP] as? OsmPrimaryLayer ?: run {
             if (hasExtendedOffer.value) OsmAndHd else defaultOsmLayer
         }
+    }
+
+    private fun getActivePrimaryUsgsLayer(): UsgsPrimaryLayer {
+        return activePrimaryLayerForSource[WmtsSource.USGS] as? UsgsPrimaryLayer ?: defaultUsgsLayer
     }
 
     fun onPrimaryLayerDefined(layerId: String) = viewModelScope.launch {
@@ -438,6 +447,8 @@ class WmtsViewModel @Inject constructor(
             openTopoMap -> OpenTopoMap
             cyclOSM -> CyclOSM
             osmAndHd -> OsmAndHd
+            usgsTopo -> UsgsTopo
+            usgsImageryTopo -> UsgsImageryTopo
             else -> null
         }
     }
@@ -473,7 +484,10 @@ class WmtsViewModel @Inject constructor(
                 flow { emit(OsmSourceData(layer)) }
             }
             WmtsSource.SWISS_TOPO -> flow { emit(SwissTopoData) }
-            WmtsSource.USGS -> flow { emit(UsgsData) }
+            WmtsSource.USGS -> {
+                val layer = getActivePrimaryUsgsLayer()
+                flow { emit(UsgsData(layer)) }
+            }
             WmtsSource.IGN_SPAIN -> flow { emit(IgnSpainData) }
             WmtsSource.IGN_BE -> flow { emit(IgnBelgiumData) }
         }
@@ -729,13 +743,14 @@ class WmtsViewModel @Inject constructor(
     }
 
     fun onSearchClick() {
-        _topBarState.value = SearchMode(searchFieldState)
-        _uiState.value = GeoplaceList(listOf())
+        _topBarState.value = SearchMode(lastSearch.orEmpty())
+        _uiState.value = GeoplaceList(lastPlaces ?: emptyList())
     }
 
     fun onQueryTextSubmit(query: String) {
         if (query.isNotEmpty()) {
             geocodingRepository.search(query)
+            lastSearch = query
         }
     }
 
@@ -790,4 +805,4 @@ private fun WmtsState.getMapState(): MapState? {
 sealed interface TopBarState
 data object Empty : TopBarState
 data class Collapsed(val hasPrimaryLayers: Boolean, val hasOverlayLayers: Boolean, val hasTrackImport: Boolean) : TopBarState
-data class SearchMode(val textValueState: MutableState<TextFieldValue>) : TopBarState
+data class SearchMode(val lastSearch: String) : TopBarState

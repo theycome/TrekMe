@@ -23,7 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -49,7 +49,7 @@ fun BottomSheetCustom(
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
-                return if (delta < 0 && source == NestedScrollSource.Drag) {
+                return if (delta < 0 && source == NestedScrollSource.UserInput) {
                     state.dispatchRawDelta(delta).toOffset()
                 } else {
                     Offset.Zero
@@ -105,7 +105,7 @@ fun BottomSheetCustom(
         Column(
             Modifier
                 .height(fullHeight)
-                .clip(BottomSheetDefaults.ExpandedShape)
+                .shadow(16.dp, BottomSheetDefaults.ExpandedShape)
                 .background(MaterialTheme.colorScheme.surface)
         ) {
             header()

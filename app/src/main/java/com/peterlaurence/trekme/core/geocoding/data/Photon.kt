@@ -1,8 +1,8 @@
 package com.peterlaurence.trekme.core.geocoding.data
 
-import com.peterlaurence.trekme.core.geocoding.domain.model.GeocodingBackend
 import com.peterlaurence.trekme.core.geocoding.domain.engine.GeoPlace
 import com.peterlaurence.trekme.core.geocoding.domain.engine.POI
+import com.peterlaurence.trekme.core.geocoding.domain.model.GeocodingBackend
 import com.peterlaurence.trekme.util.performRequest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -28,7 +28,10 @@ class Photon(private val client: OkHttpClient) : GeocodingBackend {
     }
 
     private fun makeRequest(query: String): Request {
-        return requestBuilder.url("$photonApi?q=$query&limit=10").build()
+        return requestBuilder
+            .url("$photonApi?q=$query&limit=10")
+            .header("Cache-Control", "public, max-age=604800") // 7 days
+            .build()
     }
 
     private fun convert(response: PhotonMainResponse): List<GeoPlace>? {
@@ -44,7 +47,12 @@ class Photon(private val client: OkHttpClient) : GeocodingBackend {
                     else -> POI
                 }
                 val name = it.properties.name
-                val locality = listOfNotNull(it.properties.city, it.properties.postcode, it.properties.state).joinToString(", ")
+                val locality = listOfNotNull(
+                    it.properties.city,
+                    it.properties.postcode,
+                    it.properties.state,
+                    it.properties.country
+                ).joinToString(", ")
                 GeoPlace(geoType, name, locality, lat, lon)
             } else null
         }
@@ -63,4 +71,11 @@ private data class PhotonFeature(val geometry: PhotonGeometry, val properties: P
 private data class PhotonGeometry(val coordinates: List<Double>)
 
 @Serializable
-private data class PhotonProperties(val name: String, val city: String? = null, val country: String, val postcode: String? = null, val state: String, val type: String)
+private data class PhotonProperties(
+    val name: String,
+    val city: String? = null,
+    val country: String? = null,
+    val postcode: String? = null,
+    val state: String? = null,
+    val type: String
+)
