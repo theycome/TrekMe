@@ -274,17 +274,4 @@ class Billing(
 
 }
 
-/**
- * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
- */
-data class PurchasesQueriedResult(
-    val billingResult: BillingResult,
-    val purchases: List<Purchase>,
-)
-
-fun PurchasesQueriedResult.getPurchase(type: PurchaseType, purchaseIds: PurchaseIds): Purchase? =
-    purchases.firstOrNull {
-        type.comparator(it, purchaseIds)
-    }
-
 private const val TAG = "Billing.kt"
