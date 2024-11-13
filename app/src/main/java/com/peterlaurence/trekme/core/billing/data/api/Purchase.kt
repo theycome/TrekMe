@@ -9,12 +9,12 @@ import com.peterlaurence.trekme.util.callbackFlowWrapper
  * Created by Ivan Yakushev on 24.10.2024
  */
 fun Purchase.acknowledge(
-    billingWrapper: BillingClientWrapper,
+    billing: Billing,
     onSuccess: (BillingResult) -> Unit,
     onPending: () -> Unit,
 ) {
     if (purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged) {
-        acknowledgeByBilling(billingWrapper) {
+        acknowledgeByBilling(billing) {
             if (it.responseCode == OK) {
                 onSuccess(it)
             }
@@ -24,9 +24,9 @@ fun Purchase.acknowledge(
     }
 }
 
-suspend fun Purchase.assureAcknowledgement(billingWrapper: BillingClientWrapper): Boolean =
+suspend fun Purchase.assureAcknowledgement(billing: Billing): Boolean =
     if (purchasedButNotAcknowledged) {
-        acknowledgeByBillingSuspended(billingWrapper)
+        acknowledgeByBillingSuspended(billing)
     } else false
 
 fun Purchase.containsOneTime(purchaseIds: PurchaseIds): Boolean =
@@ -41,9 +41,9 @@ fun Purchase.containsOneTimeOrSub(purchaseIds: PurchaseIds): Boolean =
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
-private suspend fun Purchase.acknowledgeByBillingSuspended(billingWrapper: BillingClientWrapper): Boolean =
+private suspend fun Purchase.acknowledgeByBillingSuspended(billing: Billing): Boolean =
     callbackFlowWrapper { emit ->
-        acknowledgeByBilling(billingWrapper) {
+        acknowledgeByBilling(billing) {
             emit {
                 it.responseCode == OK
             }
@@ -51,9 +51,9 @@ private suspend fun Purchase.acknowledgeByBillingSuspended(billingWrapper: Billi
     }()
 
 private fun Purchase.acknowledgeByBilling(
-    billingWrapper: BillingClientWrapper,
+    billing: Billing,
     onSuccess: (BillingResult) -> Unit,
-) = billingWrapper.acknowledge(this, onSuccess)
+) = billing.acknowledge(this, onSuccess)
 
 private typealias PurchaseComparator = (Purchase, PurchaseIds) -> Boolean
 
