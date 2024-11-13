@@ -1,18 +1,24 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
+import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryPurchasesParams
+import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
+import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.util.callbackFlowWrapper
 import com.peterlaurence.trekme.util.datetime.Millis
+import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.delay
+import java.util.Date
 
 /**
  * Created by Ivan Yakushev on 03.11.2024
@@ -22,6 +28,7 @@ import kotlinx.coroutines.delay
 class BillingClientWrapper(
     application: Application,
     private val purchaseIds: PurchaseIds,
+    private val purchaseVerifier: PurchaseVerifier,
     private val onPurchaseSuccess: () -> Unit,
     private val onPurchasePending: () -> Unit,
 ) {
@@ -51,14 +58,14 @@ class BillingClientWrapper(
 
     suspend fun connect() = connector.connect()
 
-    suspend fun queryInAppPurchases(): PurchasesQueriedResult {
+    private suspend fun queryInAppPurchases(): PurchasesQueriedResult {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         return queryPurchases(params)
     }
 
-    suspend fun querySubPurchases(): PurchasesQueriedResult {
+    private suspend fun querySubPurchases(): PurchasesQueriedResult {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
@@ -109,6 +116,38 @@ class BillingClientWrapper(
             .build()
         client.acknowledgePurchase(params) {
             onSuccess(it)
+        }
+    }
+
+    /**
+     * Also has a side effect of consuming not granted one time licenses...
+     */
+    suspend fun isPurchased(): Boolean {
+        if (!connect()) return false
+
+        val oneTimeLicense =
+            queryInAppPurchases()
+                .getPurchase(PurchaseType.VALID_ONE_TIME, purchaseIds)?.run {
+                    if (purchaseVerifier
+                            .checkTime(purchaseTime.millis, Date().time.millis) !is AccessGranted
+                    ) {
+                        consume(this)
+                        null
+                    } else this
+                }
+
+        return if (oneTimeLicense == null) {
+            querySubPurchases()
+                .getPurchase(PurchaseType.VALID_SUB, purchaseIds) != null
+        } else true
+    }
+
+    private fun consume(purchase: Purchase) {
+        val params = ConsumeParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        client.consumeAsync(params) { _, _ ->
+            Log.i(TAG, "Consumed the purchase. It can now be bought again.")
         }
     }
 
@@ -188,3 +227,5 @@ class BillingClientWrapper(
     }
 
 }
+
+private const val TAG = "Billing.kt"

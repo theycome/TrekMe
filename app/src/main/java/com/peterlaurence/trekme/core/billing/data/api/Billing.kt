@@ -1,21 +1,18 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
-import android.util.Log
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
-import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.NotSupportedException
 import com.peterlaurence.trekme.core.billing.domain.model.ProductNotFoundException
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
@@ -23,14 +20,12 @@ import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.util.Date
 import java.util.UUID
 
 /**
@@ -43,7 +38,7 @@ import java.util.UUID
 class Billing(
     val application: Application,
     private val purchaseIds: PurchaseIds,
-    private val purchaseVerifier: PurchaseVerifier,
+    purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
 ) : BillingApi {
 
@@ -85,6 +80,7 @@ class Billing(
     private val wrapper = BillingClientWrapper(
         application,
         purchaseIds,
+        purchaseVerifier,
         onPurchaseSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
         onPurchasePending = { callPurchasePendingCallback() },
     )
@@ -98,36 +94,8 @@ class Billing(
     override suspend fun acknowledgePurchase(): Boolean =
         wrapper.acknowledgePurchase()
 
-    /**
-     * Also has a side effect of consuming not granted one time licenses...
-     */
-    // TODO - move function into wrapper
-    override suspend fun isPurchased(): Boolean {
-        if (!wrapper.connect()) return false
-
-        val oneTimeLicense =
-            wrapper.queryInAppPurchases()
-                .getPurchase(PurchaseType.VALID_ONE_TIME, purchaseIds)?.run {
-                    if (purchaseVerifier
-                            .checkTime(purchaseTime.millis, Date().time.millis) !is AccessGranted
-                    ) {
-                        consume(purchaseToken)
-                        null
-                    } else this
-                }
-
-        return if (oneTimeLicense == null) {
-            wrapper.querySubPurchases()
-                .getPurchase(PurchaseType.VALID_SUB, purchaseIds) != null
-        } else true
-    }
-
-    private fun consume(token: String) {
-        val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(token).build()
-        billingClient.consumeAsync(consumeParams) { _, _ ->
-            Log.i(TAG, "Consumed the purchase. It can now be bought again.")
-        }
-    }
+    override suspend fun isPurchased(): Boolean =
+        wrapper.isPurchased()
 
     /**
      * Get the details of a subscription.
@@ -251,5 +219,3 @@ class Billing(
     )
 
 }
-
-private const val TAG = "Billing.kt"
