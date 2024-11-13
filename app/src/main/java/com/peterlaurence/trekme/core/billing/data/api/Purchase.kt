@@ -1,6 +1,5 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
-import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingResult
@@ -14,12 +13,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * Created by Ivan Yakushev on 24.10.2024
  */
 fun Purchase.acknowledge(
-    client: BillingClient,
+    billingWrapper: BillingClientWrapper,
     onSuccess: (BillingResult) -> Unit,
     onPending: () -> Unit,
 ) {
     if (purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged) {
-        acknowledgeByBilling(client) {
+        acknowledgeByBilling(billingWrapper) {
             if (it.responseCode == OK) {
                 onSuccess(it)
             }
@@ -29,9 +28,9 @@ fun Purchase.acknowledge(
     }
 }
 
-suspend fun Purchase.assureAcknowledgement(client: BillingClient): Boolean =
+suspend fun Purchase.assureAcknowledgement(billingWrapper: BillingClientWrapper): Boolean =
     if (purchasedButNotAcknowledged) {
-        acknowledgeByBillingSuspended(client)
+        acknowledgeByBillingSuspended(billingWrapper)
     } else false
 
 /**
@@ -41,25 +40,20 @@ suspend fun Purchase.assureAcknowledgement(client: BillingClient): Boolean =
  * By collecting a [callbackFlow], the real collector is on a different call stack. So the
  * [BillingClient] has no reference on the collector.
  */
-suspend fun Purchase.acknowledgeByBillingSuspended(client: BillingClient) = callbackFlow {
-    acknowledgeByBilling(client) {
-        trySend(it.responseCode == OK)
-    }
-    awaitClose { /* We can't do anything, but it doesn't matter */ }
-}.first()
+// TODO - use callbackFlowWrapper
+suspend fun Purchase.acknowledgeByBillingSuspended(billingWrapper: BillingClientWrapper) =
+    callbackFlow {
+        acknowledgeByBilling(billingWrapper) {
+            trySend(it.responseCode == OK)
+        }
+        awaitClose { /* We can't do anything, but it doesn't matter */ }
+    }.first()
 
 fun Purchase.acknowledgeByBilling(
-    client: BillingClient,
+    billingWrapper: BillingClientWrapper,
     onSuccess: (BillingResult) -> Unit,
-) {
-    val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-        .setPurchaseToken(purchaseToken)
-        .build()
-
-    client.acknowledgePurchase(acknowledgePurchaseParams) {
-        onSuccess(it)
-    }
-}
+) =
+    billingWrapper.acknowledgePurchase(this, onSuccess)
 
 fun Purchase.containsOneTime(purchaseIds: PurchaseIds): Boolean =
     products.any { id -> purchaseIds.containsOneTime(id) }

@@ -58,12 +58,13 @@ class Billing(
      */
     private lateinit var purchasePendingCallback: () -> Unit
 
+    // TODO - remove
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (purchases != null && billingResult.responseCode == OK) {
             purchases.forEach { purchase ->
                 if (purchase.products.any { id -> id == purchaseIds.oneTimeId || id in purchaseIds.subIdList }) {
                     purchase.acknowledge(
-                        billingClient,
+                        wrapper,
                         onSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
                         onPending = { callPurchasePendingCallback() }
                     )
@@ -74,6 +75,7 @@ class Billing(
 
     private val productDetailsForId = mutableMapOf<UUID, ProductDetails>()
 
+    // TODO - remove
     private val billingClient: BillingClient = BillingClient
         .newBuilder(application)
         .setListener(purchaseUpdatedListener)
@@ -104,18 +106,19 @@ class Billing(
      *
      * @return Whether acknowledgment was done or not.
      */
+    // TODO - move function into wrapper
     override suspend fun acknowledgePurchase(): Boolean {
         if (!wrapper.connect()) return false
 
         val oneTimeAcknowledged =
             wrapper.queryInAppPurchases()
                 .getPurchase(PurchaseType.ONE_TIME, purchaseIds)
-                ?.assureAcknowledgement(billingClient) ?: false
+                ?.assureAcknowledgement(wrapper) ?: false
 
         val subAcknowledged =
             wrapper.querySubPurchases()
                 .getPurchase(PurchaseType.SUB, purchaseIds)
-                ?.assureAcknowledgement(billingClient) ?: false
+                ?.assureAcknowledgement(wrapper) ?: false
 
         return oneTimeAcknowledged || subAcknowledged
     }
@@ -123,6 +126,7 @@ class Billing(
     /**
      * Also has a side effect of consuming not granted one time licenses...
      */
+    // TODO - move function into wrapper
     override suspend fun isPurchased(): Boolean {
         if (!wrapper.connect()) return false
 
@@ -144,7 +148,6 @@ class Billing(
     }
 
     private fun consume(token: String) {
-        // FIXME - HERE
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(token).build()
         billingClient.consumeAsync(consumeParams) { _, _ ->
             Log.i(TAG, "Consumed the purchase. It can now be bought again.")

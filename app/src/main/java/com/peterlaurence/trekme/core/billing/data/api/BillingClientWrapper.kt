@@ -1,11 +1,13 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
+import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryPurchasesParams
 import com.peterlaurence.trekme.util.callbackFlowWrapper
@@ -29,7 +31,7 @@ class BillingClientWrapper(
             purchases.forEach { purchase ->
                 if (purchase.containsOneTimeOrSub(purchaseIds)) {
                     purchase.acknowledge(
-                        client,
+                        this,
                         onSuccess = { onPurchaseSuccess() },
                         onPending = { onPurchasePending() }
                     )
@@ -71,20 +73,18 @@ class BillingClientWrapper(
             }
         }()
 
-    // TODO - as a rework for a Purchase extension function
-//    private suspend fun acknowledgeByBillingSuspended(purchase: Purchase): Boolean =
-//        initiateCallback { scope ->
-//            val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-//                .setPurchaseToken(purchase.purchaseToken)
-//                .build()
-//
-//            client.acknowledgePurchase(acknowledgePurchaseParams) {
-//                scope.callbackResult {
-//                    it.responseCode == OK
-//                }
-//            }
-//        }
-
+    fun acknowledgePurchase(
+        purchase: Purchase,
+        onSuccess: (BillingResult) -> Unit,
+    ) {
+        val params = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        client.acknowledgePurchase(params) {
+            onSuccess(it)
+        }
+    }
+    
     /**
      * Encapsulates connection functionality
      */
