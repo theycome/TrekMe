@@ -11,7 +11,6 @@ import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
-import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
@@ -96,32 +95,8 @@ class Billing(
         }
     }
 
-    /**
-     * This is one of the first things to do. If either the one-time or the subscription are among
-     * the purchases, check if it should be acknowledged. This call is required when the
-     * acknowledgement wasn't done right after a billing flow (typically when the payment method is
-     * slow and the user didn't wait the end of the procedure with the [purchaseUpdatedListener] call).
-     * So we can end up with a purchase which is in [Purchase.PurchaseState.PURCHASED] state but not
-     * acknowledged.
-     *
-     * @return Whether acknowledgment was done or not.
-     */
-    // TODO - move function into wrapper
-    override suspend fun acknowledgePurchase(): Boolean {
-        if (!wrapper.connect()) return false
-
-        val oneTimeAcknowledged =
-            wrapper.queryInAppPurchases()
-                .getPurchase(PurchaseType.ONE_TIME, purchaseIds)
-                ?.assureAcknowledgement(wrapper) ?: false
-
-        val subAcknowledged =
-            wrapper.querySubPurchases()
-                .getPurchase(PurchaseType.SUB, purchaseIds)
-                ?.assureAcknowledgement(wrapper) ?: false
-
-        return oneTimeAcknowledged || subAcknowledged
-    }
+    override suspend fun acknowledgePurchase(): Boolean =
+        wrapper.acknowledgePurchase()
 
     /**
      * Also has a side effect of consuming not granted one time licenses...

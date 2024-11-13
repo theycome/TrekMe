@@ -74,6 +74,32 @@ class BillingClientWrapper(
             }
         }()
 
+    /**
+     * This is one of the first things to do. If either the one-time or the subscription are among
+     * the purchases, check if it should be acknowledged. This call is required when the
+     * acknowledgement wasn't done right after a billing flow (typically when the payment method is
+     * slow and the user didn't wait the end of the procedure with the [purchaseUpdatedListener] call).
+     * So we can end up with a purchase which is in [Purchase.PurchaseState.PURCHASED] state but not
+     * acknowledged.
+     *
+     * @return whether acknowledgment was done or not.
+     */
+    suspend fun acknowledgePurchase(): Boolean {
+        if (!connect()) return false
+
+        val oneTimeAcknowledged =
+            queryInAppPurchases()
+                .getPurchase(PurchaseType.ONE_TIME, purchaseIds)
+                ?.assureAcknowledgement(this) ?: false
+
+        val subAcknowledged =
+            querySubPurchases()
+                .getPurchase(PurchaseType.SUB, purchaseIds)
+                ?.assureAcknowledgement(this) ?: false
+
+        return oneTimeAcknowledged || subAcknowledged
+    }
+
     fun acknowledge(
         purchase: Purchase,
         onSuccess: (BillingResult) -> Unit,
