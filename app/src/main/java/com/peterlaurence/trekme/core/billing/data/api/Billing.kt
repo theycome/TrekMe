@@ -7,7 +7,6 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
-import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ConsumeParams
@@ -28,11 +27,9 @@ import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.callbackFlowWrapper
-import com.peterlaurence.trekme.util.datetime.Millis
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
@@ -86,7 +83,7 @@ class Billing(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
         ).build()
 
-    private val connector = Connector()
+    private val connector = BillingConnector(billingClient)
 
     private suspend fun connect() = connector.connect()
 
@@ -309,78 +306,6 @@ class Billing(
         val billingResult: BillingResult,
         val productDetailsList: List<ProductDetails>,
     )
-
-    /**
-     * Encapsulates connection functionality
-     */
-    private inner class Connector {
-
-        private var connected = false
-
-        private val connectionStateListener = object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                connected = billingResult.responseCode == OK
-            }
-
-            override fun onBillingServiceDisconnected() {
-                connected = false
-            }
-        }
-
-        suspend fun connect(): Boolean =
-            runCatching {
-                awaitConnect(
-                    TEN_SECONDS,
-                    TEN_MILLIS,
-                )
-            }.isSuccess
-
-        /**
-         * Suspends at most 10s (waits for billing client to connect).
-         * Since the [BillingClient] can only notify its state through the [connectionStateListener], we
-         * poll the [connected] status. Ideally, we would collect the billing client state flow...
-         */
-        private suspend fun awaitConnect(
-            totalWaitTime: Millis,
-            delayTime: Millis,
-        ) {
-            connectClient()
-
-            var awaited = Millis(0)
-            while (awaited < totalWaitTime) {
-                if (connected) {
-                    break
-                } else {
-                    delay(delayTime.long)
-                    awaited += delayTime
-                }
-            }
-        }
-
-        /**
-         * Attempts to connect the billing service. This function immediately returns.
-         * See also [awaitConnect], which suspends at most for 10s.
-         * Don't try to make this a suspend function - the [billingClient] keeps a reference on the
-         * [BillingClientStateListener] so it would keep a reference on a continuation (leading to
-         * insidious memory leaks, depending on who invokes that suspending function).
-         * Done this way, we're sure that the [billingClient] only has a reference on this [Billing]
-         * instance.
-         */
-        private fun connectClient() {
-            with(billingClient) {
-                if (isReady)
-                    connected = true
-                else
-                    startConnection(connectionStateListener)
-            }
-        }
-
-    }
-
-    companion object {
-        private val TEN_SECONDS = Millis(10_000)
-        private val TEN_MILLIS = Millis(10)
-    }
 
 }
 
