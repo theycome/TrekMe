@@ -117,7 +117,7 @@ fun <T> launchFlowCollectionWithLifecycle(
  *       PurchasesQueriedResult(billingResult, purchases) // providing result
  *     }
  *   }
- * }()
+ * }() // note a lambda invoke syntax "()"
  * ```
  *
  * @throws IllegalStateException if lambda passed into parameter `block`,
