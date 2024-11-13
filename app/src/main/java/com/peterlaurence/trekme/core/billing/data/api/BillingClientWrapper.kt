@@ -39,6 +39,7 @@ class BillingClientWrapper(
             }
         }
     }
+
     private val client: BillingClient = BillingClient
         .newBuilder(application)
         .setListener(purchaseUpdatedListener)
@@ -73,7 +74,7 @@ class BillingClientWrapper(
             }
         }()
 
-    fun acknowledgePurchase(
+    fun acknowledge(
         purchase: Purchase,
         onSuccess: (BillingResult) -> Unit,
     ) {
@@ -84,7 +85,7 @@ class BillingClientWrapper(
             onSuccess(it)
         }
     }
-    
+
     /**
      * Encapsulates connection functionality
      */

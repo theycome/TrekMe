@@ -53,7 +53,7 @@ private suspend fun Purchase.acknowledgeByBillingSuspended(billingWrapper: Billi
 private fun Purchase.acknowledgeByBilling(
     billingWrapper: BillingClientWrapper,
     onSuccess: (BillingResult) -> Unit,
-) = billingWrapper.acknowledgePurchase(this, onSuccess)
+) = billingWrapper.acknowledge(this, onSuccess)
 
 private typealias PurchaseComparator = (Purchase, PurchaseIds) -> Boolean
 
