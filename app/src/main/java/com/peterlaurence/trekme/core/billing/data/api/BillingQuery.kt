@@ -33,7 +33,7 @@ class BillingQuery(
         }()
     }
 
-    private suspend fun queryProductDetailsResult(subId: String): ProductDetailsResult {
+    suspend fun queryProductDetailsResult(subId: String): ProductDetailsResult {
 
         val product = QueryProductDetailsParams.Product.newBuilder()
             .setProductId(subId)

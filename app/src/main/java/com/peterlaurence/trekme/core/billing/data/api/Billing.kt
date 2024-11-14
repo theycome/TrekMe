@@ -14,7 +14,6 @@ import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
-import com.android.billingclient.api.QueryProductDetailsParams
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
@@ -27,11 +26,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Date
 import java.util.UUID
 
@@ -134,18 +129,6 @@ class Billing(
         } else true
     }
 
-    fun acknowledge(
-        purchase: Purchase,
-        onSuccess: (BillingResult) -> Unit,
-    ) {
-        val params = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
-        billingClient.acknowledgePurchase(params) {
-            onSuccess(it)
-        }
-    }
-
     /**
      * Get the details of a subscription.
      * @throws [ProductNotFoundException], [NotSupportedException], [IllegalStateException]
@@ -156,7 +139,9 @@ class Billing(
 
         if (!connect()) error("failed to connect to billing")
 
-        val (billingResult, skuDetailsList) = querySubDetails(subId)
+        val (billingResult, skuDetailsList) =
+            query.queryProductDetailsResult(subId)
+
         return when (billingResult.responseCode) {
             OK -> skuDetailsList.find { it.productId == subId }?.let {
                 makeSubscriptionDetails(it)
@@ -167,33 +152,6 @@ class Billing(
             else -> error("other error")
         }
     }
-
-    /**
-     * Using a [callbackFlow] instead of [suspendCancellableCoroutine], as we have no way to remove
-     * the provided callback given to [BillingClient.queryPurchasesAsync] - so creating a memory
-     * leak.
-     * By collecting a [callbackFlow], the real collector is on a different call stack. So the
-     * [BillingClient] has no reference on the collector.
-     */
-    private suspend fun querySubDetails(subId: String): ProductDetailsResult = callbackFlow {
-        val productList =
-            listOf(
-                QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(subId)
-                    .setProductType(BillingClient.ProductType.SUBS)
-                    .build()
-            )
-
-        val params = QueryProductDetailsParams.newBuilder().setProductList(productList)
-        billingClient.queryProductDetailsAsync(params.build()) {
-                billingResult,
-                productDetailsList,
-            ->
-            trySend(ProductDetailsResult(billingResult, productDetailsList))
-        }
-
-        awaitClose { /* We can't do anything, but it doesn't matter */ }
-    }.first()
 
     override fun launchBilling(
         id: UUID,
@@ -218,6 +176,18 @@ class Billing(
         /* Since we need an Activity to start the billing flow, we send an event which the activity
          * is listening */
         appEventBus.startBillingFlow(billingParams)
+    }
+    
+    fun acknowledge(
+        purchase: Purchase,
+        onSuccess: (BillingResult) -> Unit,
+    ) {
+        val params = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        billingClient.acknowledgePurchase(params) {
+            onSuccess(it)
+        }
     }
 
     private fun makeSubscriptionDetails(productDetails: ProductDetails): SubscriptionDetails? {
