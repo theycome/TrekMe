@@ -1,9 +1,9 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
-import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.di.GpsPro
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
+import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.di.MainDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class GpsProPurchaseRepo @Inject constructor(
     @MainDispatcher mainDispatcher: CoroutineDispatcher,
-    @GpsPro private val billing: BillingApi
+    @GpsPro private val billing: BillingApi,
 ) : GpsProStateOwner {
     private val scope = CoroutineScope(mainDispatcher + SupervisorJob())
 
@@ -58,7 +58,7 @@ class GpsProPurchaseRepo @Inject constructor(
     private fun updateSubscriptionInfo() {
         scope.launch {
             runCatching {
-                val subDetails = billing.getSubDetails()
+                val subDetails = billing.getSubDetails(0)
                 _subDetailsFlow.value = subDetails
             }
         }
