@@ -9,12 +9,12 @@ import com.android.billingclient.api.Purchase
  *
  * A wrapper around data returned by [BillingClient.queryPurchasesAsync]
  */
-data class PurchasesQueriedResult(
+data class PurchasesResult(
     val billingResult: BillingResult,
     val purchases: List<Purchase>,
 )
 
-fun PurchasesQueriedResult.getPurchase(type: PurchaseType, purchaseIds: PurchaseIds): Purchase? =
+fun PurchasesResult.getPurchase(type: PurchaseType, purchaseIds: PurchaseIds): Purchase? =
     purchases.firstOrNull {
         type.comparator(it, purchaseIds)
     }

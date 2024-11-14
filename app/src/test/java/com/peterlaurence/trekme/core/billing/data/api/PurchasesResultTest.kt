@@ -13,14 +13,14 @@ import kotlin.test.Test
 /**
  * Created by Ivan Yakushev on 12.11.2024
  */
-class PurchasesQueriedResultTest {
+class PurchasesResultTest {
 
     private val purchaseA = mock(Purchase::class.java)
     private val purchaseC = mock(Purchase::class.java)
     private val purchase23 = mock(Purchase::class.java)
     private val purchase99 = mock(Purchase::class.java)
 
-    private val purchaseResult = PurchasesQueriedResult(
+    private val purchaseResult = PurchasesResult(
         BillingResult(),
         listOf(purchaseA, purchaseC, purchase23, purchase99)
     )

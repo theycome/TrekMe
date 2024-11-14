@@ -11,5 +11,5 @@ import com.android.billingclient.api.ProductDetails
  */
 data class ProductDetailsResult(
     val billingResult: BillingResult,
-    val productDetailsList: List<ProductDetails>,
+    val productDetails: List<ProductDetails>,
 )
