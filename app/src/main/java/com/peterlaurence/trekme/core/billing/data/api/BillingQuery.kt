@@ -18,21 +18,6 @@ class BillingQuery(
         queryPurchasesResult(type)
             .getPurchase(type, purchaseIds)
 
-    private suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
-
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(type.productType)
-            .build()
-
-        return callbackFlowWrapper { emit ->
-            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
-                emit {
-                    PurchasesResult(billingResult, purchases)
-                }
-            }
-        }()
-    }
-
     suspend fun queryProductDetailsResult(subId: String): ProductDetailsResult {
 
         val product = QueryProductDetailsParams.Product.newBuilder()
@@ -48,6 +33,21 @@ class BillingQuery(
             billingClient.queryProductDetailsAsync(params) { billingResult, productDetails ->
                 emit {
                     ProductDetailsResult(billingResult, productDetails)
+                }
+            }
+        }()
+    }
+
+    private suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
+
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(type.productType)
+            .build()
+
+        return callbackFlowWrapper { emit ->
+            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
+                emit {
+                    PurchasesResult(billingResult, purchases)
                 }
             }
         }()
