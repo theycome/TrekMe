@@ -277,11 +277,6 @@ class Billing(
         }
     }
 
-    private data class ProductDetailsResult(
-        val billingResult: BillingResult,
-        val productDetailsList: List<ProductDetails>,
-    )
-
 }
 
 private const val TAG = "Billing.kt"
