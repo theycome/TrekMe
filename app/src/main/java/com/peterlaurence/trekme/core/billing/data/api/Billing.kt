@@ -15,7 +15,6 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
-import com.android.billingclient.api.QueryPurchasesParams
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
@@ -26,7 +25,6 @@ import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.util.callbackFlowWrapper
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
@@ -44,7 +42,6 @@ import java.util.UUID
  *
  * @since 2019/08/06
  */
-@Suppress("TooManyFunctions")
 class Billing(
     val application: Application,
     private val purchaseIds: PurchaseIds,
@@ -85,6 +82,8 @@ class Billing(
 
     private val connector = BillingConnector(billingClient)
 
+    private val query = BillingQuery(billingClient, purchaseIds)
+
     private suspend fun connect() = connector.connect()
 
     /**
@@ -101,16 +100,38 @@ class Billing(
         if (!connect()) return false
 
         val oneTimeAcknowledged =
-            queryInAppPurchases()
-                .getPurchase(PurchaseType.ONE_TIME, purchaseIds)
+            query.queryPurchase(PurchaseType.ONE_TIME)
                 ?.assureAcknowledgement(this) ?: false
 
         val subAcknowledged =
-            querySubPurchases()
-                .getPurchase(PurchaseType.SUB, purchaseIds)
+            query.queryPurchase(PurchaseType.SUB)
                 ?.assureAcknowledgement(this) ?: false
 
         return oneTimeAcknowledged || subAcknowledged
+    }
+
+    /**
+     * Also has a side effect of consuming not granted one time licenses...
+     */
+    override suspend fun isPurchased(): Boolean {
+        if (!connect()) return false
+
+        val oneTimeLicense =
+            query.queryPurchase(PurchaseType.VALID_ONE_TIME)?.run {
+                if (
+                    purchaseVerifier.checkTime(
+                        purchaseTime.millis,
+                        Date().time.millis
+                    ) !is AccessGranted
+                ) {
+                    consume(this)
+                    null
+                } else this
+            }
+
+        return if (oneTimeLicense == null) {
+            query.queryPurchase(PurchaseType.VALID_SUB) != null
+        } else true
     }
 
     fun acknowledge(
@@ -123,29 +144,6 @@ class Billing(
         billingClient.acknowledgePurchase(params) {
             onSuccess(it)
         }
-    }
-
-    /**
-     * Also has a side effect of consuming not granted one time licenses...
-     */
-    override suspend fun isPurchased(): Boolean {
-        if (!connect()) return false
-
-        val oneTimeLicense =
-            queryInAppPurchases()
-                .getPurchase(PurchaseType.VALID_ONE_TIME, purchaseIds)?.run {
-                    if (purchaseVerifier
-                            .checkTime(purchaseTime.millis, Date().time.millis) !is AccessGranted
-                    ) {
-                        consume(this)
-                        null
-                    } else this
-                }
-
-        return if (oneTimeLicense == null) {
-            querySubPurchases()
-                .getPurchase(PurchaseType.VALID_SUB, purchaseIds) != null
-        } else true
     }
 
     /**
@@ -269,29 +267,6 @@ class Billing(
             purchasePendingCallback()
         }
     }
-
-    private suspend fun queryInAppPurchases(): PurchasesQueriedResult {
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
-            .build()
-        return queryPurchases(params)
-    }
-
-    private suspend fun querySubPurchases(): PurchasesQueriedResult {
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.SUBS)
-            .build()
-        return queryPurchases(params)
-    }
-
-    private suspend fun queryPurchases(params: QueryPurchasesParams): PurchasesQueriedResult =
-        callbackFlowWrapper { emit ->
-            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
-                emit {
-                    PurchasesQueriedResult(billingResult, purchases)
-                }
-            }
-        }()
 
     private fun consume(purchase: Purchase) {
         val params = ConsumeParams.newBuilder()

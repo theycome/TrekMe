@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
+import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
 import com.peterlaurence.trekme.util.callbackFlowWrapper
@@ -57,17 +58,20 @@ private fun Purchase.acknowledgeByBilling(
 
 private typealias PurchaseComparator = (Purchase, PurchaseIds) -> Boolean
 
-enum class PurchaseType(val comparator: PurchaseComparator) {
+enum class PurchaseType(
+    val productType: String,
+    val comparator: PurchaseComparator,
+) {
 
-    ONE_TIME(Purchase::containsOneTime),
+    ONE_TIME(ProductType.INAPP, Purchase::containsOneTime),
 
-    SUB(Purchase::containsSub),
-
-    VALID_ONE_TIME({ purchase, ids ->
+    VALID_ONE_TIME(ProductType.INAPP, { purchase, ids ->
         purchase.containsOneTime(ids) && purchase.isAcknowledged
     }),
 
-    VALID_SUB({ purchase, ids ->
+    SUB(ProductType.SUBS, Purchase::containsSub),
+    
+    VALID_SUB(ProductType.SUBS, { purchase, ids ->
         purchase.containsSub(ids) && purchase.isAcknowledged
     })
 
