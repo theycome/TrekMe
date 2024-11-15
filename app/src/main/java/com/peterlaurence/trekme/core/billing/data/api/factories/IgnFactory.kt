@@ -2,8 +2,8 @@ package com.peterlaurence.trekme.core.billing.data.api.factories
 
 import android.app.Application
 import com.peterlaurence.trekme.core.billing.data.api.Billing
-import com.peterlaurence.trekme.core.billing.data.api.PurchaseIds
 import com.peterlaurence.trekme.core.billing.data.api.components.AnnualWithGracePeriodVerifier
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.events.AppEventBus
 

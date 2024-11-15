@@ -2,6 +2,10 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
+import com.peterlaurence.trekme.core.billing.data.model.PurchasesResult
+import com.peterlaurence.trekme.core.billing.data.model.getPurchase
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe

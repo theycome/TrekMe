@@ -1,9 +1,10 @@
-package com.peterlaurence.trekme.core.billing.data.api
+package com.peterlaurence.trekme.core.billing.data.model
 
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
+import com.peterlaurence.trekme.core.billing.data.api.Billing
 import com.peterlaurence.trekme.util.callbackFlowWrapper
 
 /**
@@ -70,7 +71,7 @@ enum class PurchaseType(
     }),
 
     SUB(ProductType.SUBS, Purchase::containsSub),
-    
+
     VALID_SUB(ProductType.SUBS, { purchase, ids ->
         purchase.containsSub(ids) && purchase.isAcknowledged
     })

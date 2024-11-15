@@ -15,6 +15,11 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
+import com.peterlaurence.trekme.core.billing.data.model.acknowledge
+import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
+import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.NotSupportedException
@@ -177,7 +182,7 @@ class Billing(
          * is listening */
         appEventBus.startBillingFlow(billingParams)
     }
-    
+
     fun acknowledge(
         purchase: Purchase,
         onSuccess: (BillingResult) -> Unit,

@@ -1,4 +1,4 @@
-package com.peterlaurence.trekme.core.billing.data.api
+package com.peterlaurence.trekme.core.billing.data.model
 
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult

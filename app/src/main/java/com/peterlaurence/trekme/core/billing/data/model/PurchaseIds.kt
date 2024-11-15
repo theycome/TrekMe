@@ -1,4 +1,4 @@
-package com.peterlaurence.trekme.core.billing.data.api
+package com.peterlaurence.trekme.core.billing.data.model
 
 /**
  * Created by Ivan Yakushev on 24.10.2024
