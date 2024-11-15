@@ -1,9 +1,9 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
-import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.di.TrekmeExtended
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.ExtendedOfferStateOwner
+import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.di.MainDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class TrekmeExtendedRepository @Inject constructor(
     @MainDispatcher mainDispatcher: CoroutineDispatcher,
-    @TrekmeExtended private val billingApi: BillingApi
+    @TrekmeExtended private val billingApi: BillingApi,
 ) : ExtendedOfferStateOwner {
     private val scope = CoroutineScope(mainDispatcher + SupervisorJob())
 
@@ -87,14 +87,14 @@ class TrekmeExtendedRepository @Inject constructor(
     fun buyYearlySubscription() {
         val subscriptionDetails = _yearlySubDetailsFlow.value
         if (subscriptionDetails != null) {
-            billingApi.launchBilling(subscriptionDetails.id, this::onPurchasePending)
+            billingApi.launchBilling(subscriptionDetails, ::onPurchasePending)
         }
     }
 
     fun buyMonthlySubscription() {
         val subscriptionDetails = _monthlySubDetailsFlow.value
         if (subscriptionDetails != null) {
-            billingApi.launchBilling(subscriptionDetails.id, this::onPurchasePending)
+            billingApi.launchBilling(subscriptionDetails, ::onPurchasePending)
         }
     }
 

@@ -33,7 +33,6 @@ import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.Date
-import java.util.UUID
 
 /**
  * Manages a subscription along with a one-time purchase.
@@ -71,7 +70,8 @@ class Billing(
         }
     }
 
-    private val productDetailsForId = mutableMapOf<UUID, ProductDetails>()
+    private val subscriptionToProductMap =
+        mutableMapOf<SubscriptionDetails, ProductDetails>()
 
     private val billingClient: BillingClient = BillingClient
         .newBuilder(application)
@@ -159,11 +159,12 @@ class Billing(
     }
 
     override fun launchBilling(
-        id: UUID,
-        purchasePendingCb: () -> Unit,
+        subscription: SubscriptionDetails,
+        onPurchasePending: () -> Unit,
     ) {
-        val productDetails = productDetailsForId[id] ?: return
+        val productDetails = subscriptionToProductMap[subscription] ?: return
         val offerToken = productDetails.subscriptionOfferDetails?.get(0)?.offerToken ?: return
+
         val productDetailsParamsList =
             listOf(
                 BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -209,10 +210,6 @@ class Billing(
             }
         }
 
-        /* Assign an id and remember it (needed for purchase) */
-        val id = UUID.randomUUID()
-        productDetailsForId[id] = productDetails
-
         /* For the moment, we only support the base plan */
         val offer = productDetails.subscriptionOfferDetails?.firstOrNull() ?: return null
 
@@ -231,10 +228,12 @@ class Billing(
         } ?: return null
 
         return SubscriptionDetails(
-            id = id,
             price = realPricePhase.formattedPrice,
-            trialInfo = trialInfo
-        )
+            trialInfo = trialInfo,
+        ).run {
+            subscriptionToProductMap[this] = productDetails
+            this
+        }
     }
 
     private fun callPurchasePendingCallback() {
