@@ -10,4 +10,4 @@ data class SubscriptionDetails(
 
 sealed interface TrialInfo
 data class TrialAvailable(val trialDurationInDays: Int) : TrialInfo
-object TrialUnavailable : TrialInfo
+data object TrialUnavailable : TrialInfo
