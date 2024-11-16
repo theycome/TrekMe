@@ -57,9 +57,8 @@ class GpsProPurchaseRepo @Inject constructor(
 
     private fun updateSubscriptionInfo() {
         scope.launch {
-            runCatching {
-                val subDetails = billing.getSubDetails(0)
-                _subDetailsFlow.value = subDetails
+            billing.getSubscriptionDetails(0).onRight {
+                _subDetailsFlow.value = it
             }
         }
     }
@@ -78,4 +77,5 @@ class GpsProPurchaseRepo @Inject constructor(
     private fun onPurchaseAcknowledged() {
         _purchaseFlow.value = PurchaseState.PURCHASED
     }
+
 }

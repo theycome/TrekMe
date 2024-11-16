@@ -71,15 +71,13 @@ class TrekmeExtendedRepository @Inject constructor(
 
     private fun updateSubscriptionInfo() {
         scope.launch {
-            runCatching {
-                val subDetails = billingApi.getSubDetails(1)
-                _yearlySubDetailsFlow.value = subDetails
+            billingApi.getSubscriptionDetails(1).onRight {
+                _yearlySubDetailsFlow.value = it
             }
         }
         scope.launch {
-            runCatching {
-                val subDetails = billingApi.getSubDetails(0)
-                _monthlySubDetailsFlow.value = subDetails
+            billingApi.getSubscriptionDetails(0).onRight {
+                _monthlySubDetailsFlow.value = it
             }
         }
     }

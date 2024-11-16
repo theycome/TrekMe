@@ -2,6 +2,8 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
 import android.util.Log
+import arrow.core.Either
+import arrow.core.raise.either
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
@@ -22,8 +24,7 @@ import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
 import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
-import com.peterlaurence.trekme.core.billing.domain.model.NotSupportedException
-import com.peterlaurence.trekme.core.billing.domain.model.ProductNotFoundException
+import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
@@ -136,13 +137,18 @@ class Billing(
 
     /**
      * Get the details of a subscription.
-     * @throws [ProductNotFoundException], [NotSupportedException], [IllegalStateException]
      */
-    // FIXME - use typed result as a return type instead of exceptions
-    override suspend fun getSubDetails(index: Int): SubscriptionDetails {
-        val subId = purchaseIds.subIdList.getOrNull(index) ?: error("no sku for index $index")
+    // TODO - maybe add Raise as a context?
+    override suspend fun getSubscriptionDetails(index: Int):
+        Either<GetSubscriptionDetailsFailure, SubscriptionDetails> = either {
 
-        if (!connect()) error("failed to connect to billing")
+        val subId = purchaseIds.subIdList.getOrNull(index) ?: raise(
+            GetSubscriptionDetailsFailure.NoSkuFound(index)
+        )
+
+        if (!connect()) {
+            raise(GetSubscriptionDetailsFailure.UnableToConnectToBilling)
+        }
 
         val (billingResult, skuDetailsList) =
             query.queryProductDetailsResult(subId)
@@ -150,11 +156,11 @@ class Billing(
         return when (billingResult.responseCode) {
             OK -> skuDetailsList.find { it.productId == subId }?.let {
                 makeSubscriptionDetails(it)
-            } ?: throw ProductNotFoundException()
+            } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
 
-            FEATURE_NOT_SUPPORTED -> throw NotSupportedException()
-            SERVICE_DISCONNECTED -> error("should retry")
-            else -> error("other error")
+            FEATURE_NOT_SUPPORTED -> raise(GetSubscriptionDetailsFailure.FeatureNotSupported)
+            SERVICE_DISCONNECTED -> raise(GetSubscriptionDetailsFailure.ServiceDisconnected)
+            else -> raise(GetSubscriptionDetailsFailure.OtherFailure)
         }
     }
 
@@ -196,45 +202,49 @@ class Billing(
         }
     }
 
-    private fun makeSubscriptionDetails(productDetails: ProductDetails): SubscriptionDetails? {
-        /**
-         * Trial periods are given in the form "P1W" -> 1 week, or "P4D" -> 4 days.
-         */
-        fun parseTrialPeriodInDays(period: String): Int {
-            if (period.isEmpty()) return 0
-            val qty = period.filter { it.isDigit() }.toInt()
-            return when (period.lowercase().last()) {
-                'w' -> qty * 7
-                'd' -> qty
-                else -> qty
-            }
-        }
-
-        /* For the moment, we only support the base plan */
-        val offer = productDetails.subscriptionOfferDetails?.firstOrNull() ?: return null
-
-        /* The trial is the first pricing phase with 0 as price amount */
-        val trialData =
-            offer.pricingPhases.pricingPhaseList.firstOrNull { it.priceAmountMicros == 0L }
-        val trialInfo = if (trialData != null) {
-            TrialAvailable(trialDurationInDays = parseTrialPeriodInDays(trialData.billingPeriod))
-        } else {
-            TrialUnavailable
-        }
-
-        /* The "real" price phase is the first phase with a price other than 0 */
-        val realPricePhase = offer.pricingPhases.pricingPhaseList.firstOrNull {
-            it.priceAmountMicros != 0L
-        } ?: return null
-
-        return SubscriptionDetails(
-            price = realPricePhase.formattedPrice,
-            trialInfo = trialInfo,
-        ).run {
-            subscriptionToProductMap[this] = productDetails
-            this
+    /**
+     * Trial periods are given in the form "P1W" -> 1 week, or "P4D" -> 4 days.
+     */
+    private fun parseTrialPeriodInDays(period: String): Int {
+        if (period.isEmpty()) return 0
+        val qty = period.filter { it.isDigit() }.toInt()
+        return when (period.lowercase().last()) {
+            'w' -> qty * 7
+            'd' -> qty
+            else -> qty
         }
     }
+
+    private fun makeSubscriptionDetails(productDetails: ProductDetails): Either<GetSubscriptionDetailsFailure, SubscriptionDetails> =
+        either {
+
+            /* For the moment, we only support the base plan */
+            val offer = productDetails.subscriptionOfferDetails?.firstOrNull()
+                ?: raise(GetSubscriptionDetailsFailure.OnlyBasePlanSupported)
+
+            /* The trial is the first pricing phase with 0 as price amount */
+            val trialData =
+                offer.pricingPhases.pricingPhaseList.firstOrNull { it.priceAmountMicros == 0L }
+            val trialInfo = if (trialData != null) {
+                TrialAvailable(trialDurationInDays = parseTrialPeriodInDays(trialData.billingPeriod))
+            } else {
+                TrialUnavailable
+            }
+
+            /* The "real" price phase is the first phase with a price other than 0 */
+            val realPricePhase = offer.pricingPhases.pricingPhaseList.firstOrNull {
+                it.priceAmountMicros != 0L
+            } ?: raise(GetSubscriptionDetailsFailure.IncorrectPricingPhaseFound)
+
+            val details = SubscriptionDetails(
+                price = realPricePhase.formattedPrice,
+                trialInfo = trialInfo,
+            ).also {
+                subscriptionToProductMap[it] = productDetails
+            }
+
+            details
+        }
 
     private fun callPurchasePendingCallback() {
         if (::purchasePendingCallback.isInitialized) {

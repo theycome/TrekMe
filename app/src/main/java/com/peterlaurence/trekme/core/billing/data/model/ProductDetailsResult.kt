@@ -13,3 +13,21 @@ data class ProductDetailsResult(
     val billingResult: BillingResult,
     val productDetails: List<ProductDetails>,
 )
+
+//fun ProductDetailsResult.foo(subId: String) {
+//    return when (billingResult.responseCode) {
+//        OK -> getDetailsById(subId)?.let {
+////            makeSubscriptionDetails(it)
+//        } ?: throw ProductNotFoundException()
+//
+//        FEATURE_NOT_SUPPORTED -> throw NotSupportedException()
+//        SERVICE_DISCONNECTED -> error("should retry")
+//        else -> error("other error")
+//    }
+//}
+
+private fun ProductDetailsResult.getDetailsById(subId: String): ProductDetails? =
+    productDetails.find { it.productId == subId }
+
+//private fun ProductDetails.toSubscriptionDetails(): SubscriptionDetails? {
+//}
