@@ -2,8 +2,7 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
 import android.util.Log
-import arrow.core.Either
-import arrow.core.raise.either
+import arrow.core.raise.Raise
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
@@ -138,9 +137,9 @@ class Billing(
     /**
      * Get the details of a subscription.
      */
-    // TODO - maybe add Raise as a context?
-    override suspend fun getSubscriptionDetails(index: Int):
-        Either<GetSubscriptionDetailsFailure, SubscriptionDetails> = either {
+    // TODO - replace Int with meaningful type
+    context(Raise<GetSubscriptionDetailsFailure>)
+    override suspend fun getSubscriptionDetails(index: Int): SubscriptionDetails {
 
         val subId = purchaseIds.subIdList.getOrNull(index) ?: raise(
             GetSubscriptionDetailsFailure.NoSkuFound(index)
@@ -215,36 +214,34 @@ class Billing(
         }
     }
 
-    private fun makeSubscriptionDetails(productDetails: ProductDetails): Either<GetSubscriptionDetailsFailure, SubscriptionDetails> =
-        either {
+    context(Raise<GetSubscriptionDetailsFailure>)
+    private fun makeSubscriptionDetails(productDetails: ProductDetails): SubscriptionDetails {
 
-            /* For the moment, we only support the base plan */
-            val offer = productDetails.subscriptionOfferDetails?.firstOrNull()
-                ?: raise(GetSubscriptionDetailsFailure.OnlyBasePlanSupported)
+        /* For the moment, we only support the base plan */
+        val offer = productDetails.subscriptionOfferDetails?.firstOrNull()
+            ?: raise(GetSubscriptionDetailsFailure.OnlyBasePlanSupported)
 
-            /* The trial is the first pricing phase with 0 as price amount */
-            val trialData =
-                offer.pricingPhases.pricingPhaseList.firstOrNull { it.priceAmountMicros == 0L }
-            val trialInfo = if (trialData != null) {
-                TrialAvailable(trialDurationInDays = parseTrialPeriodInDays(trialData.billingPeriod))
-            } else {
-                TrialUnavailable
-            }
-
-            /* The "real" price phase is the first phase with a price other than 0 */
-            val realPricePhase = offer.pricingPhases.pricingPhaseList.firstOrNull {
-                it.priceAmountMicros != 0L
-            } ?: raise(GetSubscriptionDetailsFailure.IncorrectPricingPhaseFound)
-
-            val details = SubscriptionDetails(
-                price = realPricePhase.formattedPrice,
-                trialInfo = trialInfo,
-            ).also {
-                subscriptionToProductMap[it] = productDetails
-            }
-
-            details
+        /* The trial is the first pricing phase with 0 as price amount */
+        val trialData =
+            offer.pricingPhases.pricingPhaseList.firstOrNull { it.priceAmountMicros == 0L }
+        val trialInfo = if (trialData != null) {
+            TrialAvailable(trialDurationInDays = parseTrialPeriodInDays(trialData.billingPeriod))
+        } else {
+            TrialUnavailable
         }
+
+        /* The "real" price phase is the first phase with a price other than 0 */
+        val realPricePhase = offer.pricingPhases.pricingPhaseList.firstOrNull {
+            it.priceAmountMicros != 0L
+        } ?: raise(GetSubscriptionDetailsFailure.IncorrectPricingPhaseFound)
+
+        return SubscriptionDetails(
+            price = realPricePhase.formattedPrice,
+            trialInfo = trialInfo,
+        ).also {
+            subscriptionToProductMap[it] = productDetails
+        }
+    }
 
     private fun callPurchasePendingCallback() {
         if (::purchasePendingCallback.isInitialized) {

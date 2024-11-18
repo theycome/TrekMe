@@ -1,11 +1,13 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
+import arrow.core.raise.recover
 import com.peterlaurence.trekme.core.billing.di.TrekmeExtended
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.ExtendedOfferStateOwner
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.di.MainDispatcher
+import com.peterlaurence.trekme.util.log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -71,14 +73,14 @@ class TrekmeExtendedRepository @Inject constructor(
 
     private fun updateSubscriptionInfo() {
         scope.launch {
-            billingApi.getSubscriptionDetails(1).onRight {
-                _yearlySubDetailsFlow.value = it
-            }
+            recover({
+                _yearlySubDetailsFlow.value = billingApi.getSubscriptionDetails(1)
+            }) { this@TrekmeExtendedRepository.log(it) }
         }
         scope.launch {
-            billingApi.getSubscriptionDetails(0).onRight {
-                _monthlySubDetailsFlow.value = it
-            }
+            recover({
+                _monthlySubDetailsFlow.value = billingApi.getSubscriptionDetails(0)
+            }) { this@TrekmeExtendedRepository.log(it) }
         }
     }
 
