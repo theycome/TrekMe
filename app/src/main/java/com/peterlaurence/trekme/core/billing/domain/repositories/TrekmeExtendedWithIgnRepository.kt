@@ -11,7 +11,6 @@ import com.peterlaurence.trekme.util.log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -72,13 +71,13 @@ class TrekmeExtendedWithIgnRepository @Inject constructor(
         }
     }
 
-    private suspend fun updateSubscriptionInfo() = coroutineScope {
-        launch {
+    private fun updateSubscriptionInfo() {
+        scope.launch {
             recover({
                 _yearlySubDetailsFlow.value = billingApi.getSubscriptionDetails(1)
             }) { this@TrekmeExtendedWithIgnRepository.log(it) }
         }
-        launch {
+        scope.launch {
             recover({
                 _monthlySubDetailsFlow.value = billingApi.getSubscriptionDetails(0)
             }) { this@TrekmeExtendedWithIgnRepository.log(it) }
