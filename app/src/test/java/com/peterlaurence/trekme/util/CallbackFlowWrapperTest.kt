@@ -2,7 +2,7 @@ package com.peterlaurence.trekme.util
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 
 /**
@@ -11,7 +11,7 @@ import kotlin.test.Test
 class CallbackFlowWrapperTest {
 
     @Test
-    fun `vanilla usage`(): Unit = runBlocking {
+    fun `vanilla usage`(): Unit = runTest {
 
         val v = 101
         val res = callbackFlowWrapper { emit ->
@@ -22,7 +22,7 @@ class CallbackFlowWrapperTest {
     }
 
     @Test
-    fun `multiple emit calls`(): Unit = runBlocking {
+    fun `multiple emit calls`(): Unit = runTest {
 
         shouldThrow<IllegalStateException> {
             callbackFlowWrapper { emit ->
