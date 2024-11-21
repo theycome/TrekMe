@@ -18,6 +18,7 @@ import com.android.billingclient.api.PurchasesUpdatedListener
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.data.model.acknowledge
 import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
 import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
@@ -41,12 +42,12 @@ import java.util.Date
  *
  * @since 2019/08/06
  */
-class Billing(
+class Billing<in T : SubscriptionType>(
     val application: Application,
     private val purchaseIds: PurchaseIds,
     private val purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
-) : BillingApi {
+) : BillingApi<T> {
 
     override val purchaseAcknowledgedEvent =
         MutableSharedFlow<Unit>(0, 1, BufferOverflow.DROP_OLDEST)
@@ -137,13 +138,22 @@ class Billing(
     /**
      * Get the details of a subscription.
      */
-    // TODO - replace Int with meaningful type
     context(Raise<GetSubscriptionDetailsFailure>)
-    override suspend fun getSubscriptionDetails(index: Int): SubscriptionDetails {
+    override suspend fun getSubscriptionDetails(subscriptionType: T): SubscriptionDetails {
 
-        val subId = purchaseIds.subIdList.getOrNull(index) ?: raise(
-            GetSubscriptionDetailsFailure.NoSkuFound(index)
-        )
+        // TODO - add dispatcher code into PurchaseIds
+
+//        when (subscriptionType) {
+//            SubscriptionType.Single -> {}
+//            SubscriptionType.MonthAndYear.Month -> {}
+//            SubscriptionType.MonthAndYear.Year -> {}
+//        }
+
+//        val subId = purchaseIds.subIdList.getOrNull(index) ?: raise(
+//            GetSubscriptionDetailsFailure.NoSkuFound(index)
+//        )
+
+        val subId = ""
 
         if (!connect()) {
             raise(GetSubscriptionDetailsFailure.UnableToConnectToBilling)
@@ -189,6 +199,7 @@ class Billing(
         appEventBus.startBillingFlow(billingParams)
     }
 
+    // TODO - shouldn't expose, must be private
     fun acknowledge(
         purchase: Purchase,
         onSuccess: (BillingResult) -> Unit,

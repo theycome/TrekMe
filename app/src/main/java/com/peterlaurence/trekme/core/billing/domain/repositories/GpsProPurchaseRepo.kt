@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
 import arrow.core.raise.recover
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.di.GpsPro
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
@@ -20,8 +21,9 @@ import javax.inject.Singleton
 @Singleton
 class GpsProPurchaseRepo @Inject constructor(
     @MainDispatcher mainDispatcher: CoroutineDispatcher,
-    @GpsPro private val billing: BillingApi,
+    @GpsPro private val billing: BillingApi<SubscriptionType.Single>,
 ) : GpsProStateOwner {
+
     private val scope = CoroutineScope(mainDispatcher + SupervisorJob())
 
     private val _purchaseFlow = MutableStateFlow(PurchaseState.CHECK_PENDING)
@@ -60,7 +62,7 @@ class GpsProPurchaseRepo @Inject constructor(
     private fun updateSubscriptionInfo() {
         scope.launch {
             recover({
-                _subDetailsFlow.value = billing.getSubscriptionDetails(0)
+                _subDetailsFlow.value = billing.getSubscriptionDetails(SubscriptionType.Single)
             }) { this@GpsProPurchaseRepo.log(it) }
         }
     }

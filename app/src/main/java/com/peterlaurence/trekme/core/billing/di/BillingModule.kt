@@ -1,15 +1,16 @@
 package com.peterlaurence.trekme.core.billing.di
 
 import android.app.Application
-import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
-import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
 import com.peterlaurence.trekme.core.billing.data.api.factories.buildGpsProBilling
 import com.peterlaurence.trekme.core.billing.data.api.factories.buildIgnBilling
 import com.peterlaurence.trekme.core.billing.data.api.factories.buildTrekmeExtendedBilling
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
+import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.ExtendedOfferStateOwner
-import com.peterlaurence.trekme.core.billing.domain.repositories.TrekmeExtendedWithIgnRepository
+import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
 import com.peterlaurence.trekme.core.billing.domain.repositories.GpsProPurchaseRepo
 import com.peterlaurence.trekme.core.billing.domain.repositories.TrekmeExtendedRepository
+import com.peterlaurence.trekme.core.billing.domain.repositories.TrekmeExtendedWithIgnRepository
 import com.peterlaurence.trekme.events.AppEventBus
 import dagger.Module
 import dagger.Provides
@@ -28,7 +29,10 @@ object BillingModule {
     @GpsPro
     @Singleton
     @Provides
-    fun bindGpsProBilling(application: Application, appEventBus: AppEventBus): BillingApi {
+    fun bindGpsProBilling(
+        application: Application,
+        appEventBus: AppEventBus,
+    ): BillingApi<@JvmWildcard SubscriptionType.Single> {
         return buildGpsProBilling(application, appEventBus)
     }
 
@@ -41,17 +45,20 @@ object BillingModule {
     fun bindIgnBilling(
         application: Application,
         appEventBus: AppEventBus,
-    ): BillingApi {
+    ): BillingApi<@JvmWildcard SubscriptionType.MonthAndYear> {
         return buildIgnBilling(application, appEventBus)
     }
 
+    /**
+     * A single instance of [BillingApi] is used across the app. This object isn't expensive to create.
+     */
     @TrekmeExtended
     @Singleton
     @Provides
     fun bindTrekmeExtendedBilling(
         application: Application,
         appEventBus: AppEventBus,
-    ): BillingApi {
+    ): BillingApi<@JvmWildcard SubscriptionType.MonthAndYear> {
         return buildTrekmeExtendedBilling(application, appEventBus)
     }
 

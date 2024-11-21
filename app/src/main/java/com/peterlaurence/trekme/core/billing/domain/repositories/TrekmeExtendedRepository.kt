@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
 import arrow.core.raise.recover
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.di.TrekmeExtended
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.ExtendedOfferStateOwner
@@ -20,8 +21,9 @@ import javax.inject.Singleton
 @Singleton
 class TrekmeExtendedRepository @Inject constructor(
     @MainDispatcher mainDispatcher: CoroutineDispatcher,
-    @TrekmeExtended private val billingApi: BillingApi,
+    @TrekmeExtended private val billingApi: BillingApi<SubscriptionType.MonthAndYear>,
 ) : ExtendedOfferStateOwner {
+
     private val scope = CoroutineScope(mainDispatcher + SupervisorJob())
 
     private val _purchaseFlow = MutableStateFlow(PurchaseState.CHECK_PENDING)
@@ -74,12 +76,14 @@ class TrekmeExtendedRepository @Inject constructor(
     private fun updateSubscriptionInfo() {
         scope.launch {
             recover({
-                _yearlySubDetailsFlow.value = billingApi.getSubscriptionDetails(1)
+                _yearlySubDetailsFlow.value =
+                    billingApi.getSubscriptionDetails(SubscriptionType.MonthAndYear.Year)
             }) { this@TrekmeExtendedRepository.log(it) }
         }
         scope.launch {
             recover({
-                _monthlySubDetailsFlow.value = billingApi.getSubscriptionDetails(0)
+                _monthlySubDetailsFlow.value =
+                    billingApi.getSubscriptionDetails(SubscriptionType.MonthAndYear.Month)
             }) { this@TrekmeExtendedRepository.log(it) }
         }
     }

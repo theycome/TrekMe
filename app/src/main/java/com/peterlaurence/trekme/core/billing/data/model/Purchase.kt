@@ -10,8 +10,9 @@ import com.peterlaurence.trekme.util.callbackFlowWrapper
 /**
  * Created by Ivan Yakushev on 24.10.2024
  */
-fun Purchase.acknowledge(
-    billing: Billing,
+// TODO - move acknowledge on Purchase operations into Billing - shouldn't expose Billing's functions
+fun <T : SubscriptionType> Purchase.acknowledge(
+    billing: Billing<T>,
     onSuccess: (BillingResult) -> Unit,
     onPending: () -> Unit,
 ) {
@@ -26,7 +27,7 @@ fun Purchase.acknowledge(
     }
 }
 
-suspend fun Purchase.assureAcknowledgement(billing: Billing): Boolean =
+suspend fun <T : SubscriptionType> Purchase.assureAcknowledgement(billing: Billing<T>): Boolean =
     if (purchasedButNotAcknowledged) {
         acknowledgeByBillingSuspended(billing)
     } else false
@@ -43,7 +44,7 @@ fun Purchase.containsOneTimeOrSub(purchaseIds: PurchaseIds): Boolean =
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
 
-private suspend fun Purchase.acknowledgeByBillingSuspended(billing: Billing): Boolean =
+private suspend fun <T : SubscriptionType> Purchase.acknowledgeByBillingSuspended(billing: Billing<T>): Boolean =
     callbackFlowWrapper { emit ->
         acknowledgeByBilling(billing) {
             emit {
@@ -52,8 +53,8 @@ private suspend fun Purchase.acknowledgeByBillingSuspended(billing: Billing): Bo
         }
     }()
 
-private fun Purchase.acknowledgeByBilling(
-    billing: Billing,
+private fun <T : SubscriptionType> Purchase.acknowledgeByBilling(
+    billing: Billing<T>,
     onSuccess: (BillingResult) -> Unit,
 ) = billing.acknowledge(this, onSuccess)
 
