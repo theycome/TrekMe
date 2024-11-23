@@ -42,11 +42,11 @@ class GpsProPurchaseRepo @Inject constructor(
         scope.launch {
 
             /* Check if we just need to acknowledge the purchase */
-            val ackDone = billing.acknowledgePurchase()
+            val ackDone = billing.queryAndAcknowledgePurchases()
 
             /* Otherwise, do normal checks */
             if (!ackDone) {
-                val result = if (billing.isPurchased()) {
+                val result = if (billing.queryPurchasesBeingPurchased()) {
                     PurchaseState.PURCHASED
                 } else {
                     updateSubscriptionInfo()

@@ -45,7 +45,7 @@ class TrekmeExtendedWithIgnRepository @Inject constructor(
         scope.launch {
 
             /* Check if we just need to acknowledge the purchase */
-            val ackDone = billingApi.acknowledgePurchase()
+            val ackDone = billingApi.queryAndAcknowledgePurchases()
 
             /* Otherwise, do normal checks */
             if (!ackDone) {
@@ -57,7 +57,7 @@ class TrekmeExtendedWithIgnRepository @Inject constructor(
     }
 
     suspend fun updatePurchaseState() {
-        val result = if (billingApi.isPurchased()) {
+        val result = if (billingApi.queryPurchasesBeingPurchased()) {
             PurchaseState.PURCHASED
         } else {
             updateSubscriptionInfo()
@@ -67,7 +67,7 @@ class TrekmeExtendedWithIgnRepository @Inject constructor(
     }
 
     fun acknowledgePurchase() = scope.launch {
-        val ackDone = billingApi.acknowledgePurchase()
+        val ackDone = billingApi.queryAndAcknowledgePurchases()
         if (ackDone) {
             onPurchaseAcknowledged()
         }

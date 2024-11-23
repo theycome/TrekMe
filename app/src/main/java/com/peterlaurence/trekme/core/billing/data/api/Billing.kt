@@ -99,7 +99,7 @@ class Billing<in T : SubscriptionType>(
      *
      * @return whether acknowledgment was done or not.
      */
-    override suspend fun acknowledgePurchase(): Boolean {
+    override suspend fun queryAndAcknowledgePurchases(): Boolean {
         if (!connect()) return false
 
         val oneTimeAcknowledged =
@@ -116,7 +116,7 @@ class Billing<in T : SubscriptionType>(
     /**
      * Also has a side effect of consuming not granted one time licenses...
      */
-    override suspend fun isPurchased(): Boolean {
+    override suspend fun queryPurchasesBeingPurchased(): Boolean {
         if (!connect()) return false
 
         val oneTimeLicense =
@@ -148,7 +148,7 @@ class Billing<in T : SubscriptionType>(
         }
 
         val subId = purchaseIdsResolver(subscriptionType)
-        
+
         val (billingResult, skuDetailsList) =
             query.queryProductDetailsResult(subId)
 
