@@ -32,13 +32,13 @@ suspend fun <T : SubscriptionType> Purchase.assureAcknowledgement(billing: Billi
         acknowledgeByBillingSuspended(billing)
     } else false
 
-fun Purchase.containsOneTime(purchaseIds: PurchaseIds): Boolean =
+fun Purchase.containsOneTime(purchaseIds: PurchaseIdsContract): Boolean =
     products.any { id -> purchaseIds.containsOneTime(id) }
 
-fun Purchase.containsSub(purchaseIds: PurchaseIds): Boolean =
+fun Purchase.containsSub(purchaseIds: PurchaseIdsContract): Boolean =
     products.any { id -> purchaseIds.containsSub(id) }
 
-fun Purchase.containsOneTimeOrSub(purchaseIds: PurchaseIds): Boolean =
+fun Purchase.containsOneTimeOrSub(purchaseIds: PurchaseIdsContract): Boolean =
     products.any { id -> purchaseIds.containsOneTime(id) || purchaseIds.containsSub(id) }
 
 val Purchase.purchasedButNotAcknowledged: Boolean
@@ -58,7 +58,7 @@ private fun <T : SubscriptionType> Purchase.acknowledgeByBilling(
     onSuccess: (BillingResult) -> Unit,
 ) = billing.acknowledge(this, onSuccess)
 
-private typealias PurchaseComparator = (Purchase, PurchaseIds) -> Boolean
+private typealias PurchaseComparator = (Purchase, PurchaseIdsContract) -> Boolean
 
 enum class PurchaseType(
     val productType: String,

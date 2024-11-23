@@ -14,7 +14,7 @@ data class PurchasesResult(
     val purchases: List<Purchase>,
 )
 
-fun PurchasesResult.getPurchase(type: PurchaseType, purchaseIds: PurchaseIds): Purchase? =
+fun PurchasesResult.getPurchase(type: PurchaseType, purchaseIds: PurchaseIdsContract): Purchase? =
     purchases.firstOrNull {
         type.comparator(it, purchaseIds)
     }

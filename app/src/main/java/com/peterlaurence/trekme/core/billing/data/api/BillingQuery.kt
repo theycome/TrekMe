@@ -5,7 +5,7 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.peterlaurence.trekme.core.billing.data.model.ProductDetailsResult
-import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.PurchasesResult
 import com.peterlaurence.trekme.core.billing.data.model.getPurchase
@@ -16,7 +16,7 @@ import com.peterlaurence.trekme.util.callbackFlowWrapper
  */
 class BillingQuery(
     private val billingClient: BillingClient,
-    private val purchaseIds: PurchaseIds,
+    private val purchaseIds: PurchaseIdsContract,
 ) {
 
     suspend fun queryPurchase(type: PurchaseType): Purchase? =

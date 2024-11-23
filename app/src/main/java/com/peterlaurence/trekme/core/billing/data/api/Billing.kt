@@ -16,7 +16,8 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.peterlaurence.trekme.core.billing.data.model.BillingParams
-import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsResolver
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.data.model.acknowledge
@@ -44,7 +45,8 @@ import java.util.Date
  */
 class Billing<in T : SubscriptionType>(
     val application: Application,
-    private val purchaseIds: PurchaseIds,
+    private val purchaseIds: PurchaseIdsContract,
+    private val purchaseIdsResolver: PurchaseIdsResolver<T>,
     private val purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
 ) : BillingApi<T> {
@@ -141,24 +143,12 @@ class Billing<in T : SubscriptionType>(
     context(Raise<GetSubscriptionDetailsFailure>)
     override suspend fun getSubscriptionDetails(subscriptionType: T): SubscriptionDetails {
 
-        // TODO - add dispatcher code into PurchaseIds
-
-//        when (subscriptionType) {
-//            SubscriptionType.Single -> {}
-//            SubscriptionType.MonthAndYear.Month -> {}
-//            SubscriptionType.MonthAndYear.Year -> {}
-//        }
-
-//        val subId = purchaseIds.subIdList.getOrNull(index) ?: raise(
-//            GetSubscriptionDetailsFailure.NoSkuFound(index)
-//        )
-
-        val subId = ""
-
         if (!connect()) {
             raise(GetSubscriptionDetailsFailure.UnableToConnectToBilling)
         }
 
+        val subId = purchaseIdsResolver(subscriptionType)
+        
         val (billingResult, skuDetailsList) =
             query.queryProductDetailsResult(subId)
 

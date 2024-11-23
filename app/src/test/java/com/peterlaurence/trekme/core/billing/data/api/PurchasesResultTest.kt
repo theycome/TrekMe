@@ -2,7 +2,8 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
-import com.peterlaurence.trekme.core.billing.data.model.PurchaseIds
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsMonthYear
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsSingle
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.PurchasesResult
 import com.peterlaurence.trekme.core.billing.data.model.getPurchase
@@ -19,24 +20,24 @@ import kotlin.test.Test
  */
 class PurchasesResultTest {
 
-    private val purchaseA = mock(Purchase::class.java)
+    private val purchaseAba = mock(Purchase::class.java)
     private val purchaseC = mock(Purchase::class.java)
     private val purchase23 = mock(Purchase::class.java)
     private val purchase99 = mock(Purchase::class.java)
 
     private val purchaseResult = PurchasesResult(
         BillingResult(),
-        listOf(purchaseA, purchaseC, purchase23, purchase99)
+        listOf(purchaseAba, purchaseC, purchase23, purchase99)
     )
 
     @BeforeTest
     fun init() {
-        `when`(purchaseA.products).thenReturn(listOf("a", "b", "A"))
+        `when`(purchaseAba.products).thenReturn(listOf("a", "b", "A"))
         `when`(purchaseC.products).thenReturn(listOf("C"))
         `when`(purchase23.products).thenReturn(listOf("2", "3"))
         `when`(purchase99.products).thenReturn(listOf("99"))
 
-        `when`(purchaseA.isAcknowledged).thenReturn(true)
+        `when`(purchaseAba.isAcknowledged).thenReturn(true)
         `when`(purchase23.isAcknowledged).thenReturn(true)
     }
 
@@ -47,8 +48,8 @@ class PurchasesResultTest {
     fun `getPurchase ONE_TIME success`() {
 
         val ids = listOf(
-            PurchaseIds("A", listOf("1", "2", "3")),
-            PurchaseIds("99", listOf()),
+            PurchaseIdsSingle("99", ""),
+            PurchaseIdsMonthYear("A", "1", "2"),
         )
 
         ids.forEach {
@@ -66,9 +67,9 @@ class PurchasesResultTest {
     fun `getPurchase ONE_TIME failure`() {
 
         val ids = listOf(
-            PurchaseIds("B", listOf("99")),
-            PurchaseIds("BB", listOf("99")),
-            PurchaseIds("", listOf("1")),
+            PurchaseIdsSingle("B", "99"),
+            PurchaseIdsMonthYear("BB", "99", ""),
+            PurchaseIdsSingle("", "1"),
         )
 
         ids.forEach {
@@ -85,9 +86,9 @@ class PurchasesResultTest {
     fun `getPurchase SUB success`() {
 
         val ids = listOf(
-            PurchaseIds("", listOf("2", "333")),
-            PurchaseIds("W", listOf("99")),
-            PurchaseIds("WWW", listOf("a")),
+            PurchaseIdsMonthYear("", "2", "333"),
+            PurchaseIdsSingle("W", "99"),
+            PurchaseIdsSingle("WWW", "a"),
         )
 
         ids.forEach {
@@ -105,10 +106,10 @@ class PurchasesResultTest {
     fun `getPurchase SUB failure`() {
 
         val ids = listOf(
-            PurchaseIds("", listOf()),
-            PurchaseIds("W", listOf("999")),
-            PurchaseIds("WWW", listOf("")),
-            PurchaseIds("WWW", listOf("W")),
+            PurchaseIdsSingle("", ""),
+            PurchaseIdsSingle("W", "999"),
+            PurchaseIdsSingle("WWW", ""),
+            PurchaseIdsSingle("WWW", "W"),
         )
 
         ids.forEach {
@@ -127,9 +128,9 @@ class PurchasesResultTest {
     fun `getPurchase VALID_ONE_TIME success`() {
 
         val ids = listOf(
-            PurchaseIds("A", listOf("1", "2", "3")),
-            PurchaseIds("3", listOf()),
-            PurchaseIds("a", listOf("")),
+            PurchaseIdsMonthYear("A", "1", "2"),
+            PurchaseIdsSingle("3", ""),
+            PurchaseIdsSingle("a", ""),
         )
 
         ids.forEach {
@@ -148,10 +149,10 @@ class PurchasesResultTest {
     fun `getPurchase VALID_ONE_TIME failure`() {
 
         val ids = listOf(
-            PurchaseIds("C", listOf("1", "2", "3")),
-            PurchaseIds("99", listOf()),
-            PurchaseIds("", listOf("")),
-            PurchaseIds("w", listOf("115")),
+            PurchaseIdsMonthYear("C", "1", "3"),
+            PurchaseIdsSingle("99", ""),
+            PurchaseIdsSingle("", ""),
+            PurchaseIdsSingle("w", "115"),
         )
 
         ids.forEach {
@@ -170,9 +171,9 @@ class PurchasesResultTest {
     fun `getPurchase VALID_SUB success`() {
 
         val ids = listOf(
-            PurchaseIds("A", listOf("1", "2", "3", "99")),
-            PurchaseIds("", listOf("a", "C")),
-            PurchaseIds("a", listOf("A")),
+            PurchaseIdsMonthYear("A", "3", "99"),
+            PurchaseIdsMonthYear("", "a", "C"),
+            PurchaseIdsSingle("a", "A"),
         )
 
         ids.forEach {
@@ -191,11 +192,11 @@ class PurchasesResultTest {
     fun `getPurchase VALID_SUB failure`() {
 
         val ids = listOf(
-            PurchaseIds("A", listOf()),
-            PurchaseIds("a", listOf("")),
-            PurchaseIds("", listOf("_", "C")),
-            PurchaseIds("a", listOf("99")),
-            PurchaseIds("a", listOf("aa")),
+            PurchaseIdsSingle("A", ""),
+            PurchaseIdsSingle("a", ""),
+            PurchaseIdsMonthYear("", "_", "C"),
+            PurchaseIdsSingle("a", "99"),
+            PurchaseIdsSingle("a", "aa"),
         )
 
         ids.forEach {
