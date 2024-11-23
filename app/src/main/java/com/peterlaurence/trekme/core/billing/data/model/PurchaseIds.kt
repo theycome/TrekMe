@@ -28,8 +28,7 @@ data class PurchaseIdsSingle(
     private val subId: String,
 ) : PurchaseIdsContract, PurchaseIdsResolver<SubscriptionType.Single> {
 
-    override val subIdList: List<String> =
-        listOf(subId) // TODO - what if set in constructor - will this statement still override correctly
+    override val subIdList: List<String> = listOf(subId)
 
     override operator fun invoke(type: SubscriptionType.Single): String = subId
 
