@@ -68,8 +68,8 @@ class PurchasesResultTest {
 
         val ids = listOf(
             PurchaseIdsSingle("B", "99"),
-            PurchaseIdsMonthYear("BB", "99", ""),
-            PurchaseIdsSingle("", "1"),
+            PurchaseIdsMonthYear("BB", "99", "A"),
+            PurchaseIdsSingle("", "2"),
         )
 
         ids.forEach {
@@ -106,10 +106,10 @@ class PurchasesResultTest {
     fun `getPurchase SUB failure`() {
 
         val ids = listOf(
-            PurchaseIdsSingle("", ""),
-            PurchaseIdsSingle("W", "999"),
+            PurchaseIdsSingle("a", ""),
+            PurchaseIdsSingle("2", "999"),
             PurchaseIdsSingle("WWW", ""),
-            PurchaseIdsSingle("WWW", "W"),
+            PurchaseIdsSingle("99", "W"),
         )
 
         ids.forEach {
@@ -150,8 +150,8 @@ class PurchasesResultTest {
 
         val ids = listOf(
             PurchaseIdsMonthYear("C", "1", "3"),
-            PurchaseIdsSingle("99", ""),
-            PurchaseIdsSingle("", ""),
+            PurchaseIdsSingle("99", "2"),
+            PurchaseIdsSingle("", "A"),
             PurchaseIdsSingle("w", "115"),
         )
 
