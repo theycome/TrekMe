@@ -3,13 +3,11 @@ package com.peterlaurence.trekme.core.billing.data.api
 import android.app.Application
 import android.util.Log
 import arrow.core.raise.Raise
-import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
 import com.android.billingclient.api.BillingFlowParams
-import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
@@ -23,13 +21,13 @@ import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.data.model.acknowledge
 import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
 import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
+import com.peterlaurence.trekme.core.billing.data.model.getDetailsById
+import com.peterlaurence.trekme.core.billing.data.model.toSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
-import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
-import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
@@ -55,7 +53,7 @@ class Billing<in T : SubscriptionType>(
         MutableSharedFlow<Unit>(0, 1, BufferOverflow.DROP_OLDEST)
 
     /**
-     * seems to stay uninitialized...
+     * seems to stay uninitialized, and thus unused...
      */
     private lateinit var purchasePendingCallback: () -> Unit
 
@@ -64,7 +62,7 @@ class Billing<in T : SubscriptionType>(
             purchases.forEach { purchase ->
                 if (purchase.containsOneTimeOrSub(purchaseIds)) {
                     purchase.acknowledge(
-                        this,
+                        acknowledgePurchaseFunctor,
                         onSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
                         onPending = { callPurchasePendingCallback() }
                     )
@@ -87,6 +85,8 @@ class Billing<in T : SubscriptionType>(
 
     private val query = BillingQuery(billingClient, purchaseIds)
 
+    private val acknowledgePurchaseFunctor: AcknowledgePurchaseFunctor = query::acknowledgePurchase
+
     private suspend fun connect() = connector.connect()
 
     /**
@@ -104,11 +104,11 @@ class Billing<in T : SubscriptionType>(
 
         val oneTimeAcknowledged =
             query.queryPurchase(PurchaseType.ONE_TIME)
-                ?.assureAcknowledgement(this) ?: false
+                ?.assureAcknowledgement(acknowledgePurchaseFunctor) ?: false
 
         val subAcknowledged =
             query.queryPurchase(PurchaseType.SUB)
-                ?.assureAcknowledgement(this) ?: false
+                ?.assureAcknowledgement(acknowledgePurchaseFunctor) ?: false
 
         return oneTimeAcknowledged || subAcknowledged
     }
@@ -148,14 +148,17 @@ class Billing<in T : SubscriptionType>(
         }
 
         val subId = purchaseIdsResolver(subscriptionType)
+        val result = query.queryProductDetailsResult(subId)
 
-        val (billingResult, skuDetailsList) =
-            query.queryProductDetailsResult(subId)
-
-        return when (billingResult.responseCode) {
-            OK -> skuDetailsList.find { it.productId == subId }?.let {
-                makeSubscriptionDetails(it)
-            } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
+        return when (result.billingResult.responseCode) {
+            OK -> {
+                result.getDetailsById(subId)?.let { productDetails ->
+                    productDetails.toSubscriptionDetails(::parseTrialPeriodInDays).let {
+                        subscriptionToProductMap[it] = productDetails
+                        it
+                    }
+                } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
+            }
 
             FEATURE_NOT_SUPPORTED -> raise(GetSubscriptionDetailsFailure.FeatureNotSupported)
             SERVICE_DISCONNECTED -> raise(GetSubscriptionDetailsFailure.ServiceDisconnected)
@@ -163,6 +166,7 @@ class Billing<in T : SubscriptionType>(
         }
     }
 
+    // TODO - continue with refactoring
     override fun launchBilling(
         subscription: SubscriptionDetails,
         onPurchasePending: () -> Unit,
@@ -189,19 +193,6 @@ class Billing<in T : SubscriptionType>(
         appEventBus.startBillingFlow(billingParams)
     }
 
-    // TODO - shouldn't expose, must be private
-    fun acknowledge(
-        purchase: Purchase,
-        onSuccess: (BillingResult) -> Unit,
-    ) {
-        val params = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
-        billingClient.acknowledgePurchase(params) {
-            onSuccess(it)
-        }
-    }
-
     /**
      * Trial periods are given in the form "P1W" -> 1 week, or "P4D" -> 4 days.
      */
@@ -212,35 +203,6 @@ class Billing<in T : SubscriptionType>(
             'w' -> qty * 7
             'd' -> qty
             else -> qty
-        }
-    }
-
-    context(Raise<GetSubscriptionDetailsFailure>)
-    private fun makeSubscriptionDetails(productDetails: ProductDetails): SubscriptionDetails {
-
-        /* For the moment, we only support the base plan */
-        val offer = productDetails.subscriptionOfferDetails?.firstOrNull()
-            ?: raise(GetSubscriptionDetailsFailure.OnlyBasePlanSupported)
-
-        /* The trial is the first pricing phase with 0 as price amount */
-        val trialData =
-            offer.pricingPhases.pricingPhaseList.firstOrNull { it.priceAmountMicros == 0L }
-        val trialInfo = if (trialData != null) {
-            TrialAvailable(trialDurationInDays = parseTrialPeriodInDays(trialData.billingPeriod))
-        } else {
-            TrialUnavailable
-        }
-
-        /* The "real" price phase is the first phase with a price other than 0 */
-        val realPricePhase = offer.pricingPhases.pricingPhaseList.firstOrNull {
-            it.priceAmountMicros != 0L
-        } ?: raise(GetSubscriptionDetailsFailure.IncorrectPricingPhaseFound)
-
-        return SubscriptionDetails(
-            price = realPricePhase.formattedPrice,
-            trialInfo = trialInfo,
-        ).also {
-            subscriptionToProductMap[it] = productDetails
         }
     }
 

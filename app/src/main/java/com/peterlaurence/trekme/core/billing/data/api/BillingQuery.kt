@@ -1,6 +1,8 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
+import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
@@ -43,6 +45,18 @@ class BillingQuery(
         }()
     }
 
+    fun acknowledgePurchase(
+        purchase: Purchase,
+        onSuccess: (BillingResult) -> Unit,
+    ) {
+        val params = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        billingClient.acknowledgePurchase(params) {
+            onSuccess(it)
+        }
+    }
+
     private suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
 
         val params = QueryPurchasesParams.newBuilder()
@@ -59,3 +73,5 @@ class BillingQuery(
     }
 
 }
+
+typealias AcknowledgePurchaseFunctor = (Purchase, (BillingResult) -> Unit) -> Unit

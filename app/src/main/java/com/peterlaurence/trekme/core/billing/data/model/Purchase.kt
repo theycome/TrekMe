@@ -4,20 +4,19 @@ import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
-import com.peterlaurence.trekme.core.billing.data.api.Billing
+import com.peterlaurence.trekme.core.billing.data.api.AcknowledgePurchaseFunctor
 import com.peterlaurence.trekme.util.callbackFlowWrapper
 
 /**
  * Created by Ivan Yakushev on 24.10.2024
  */
-// TODO - move acknowledge on Purchase operations into Billing - shouldn't expose Billing's functions
-fun <T : SubscriptionType> Purchase.acknowledge(
-    billing: Billing<T>,
+fun Purchase.acknowledge(
+    acknowledgeFunctor: AcknowledgePurchaseFunctor,
     onSuccess: (BillingResult) -> Unit,
     onPending: () -> Unit,
 ) {
     if (purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged) {
-        acknowledgeByBilling(billing) {
+        acknowledgeFunctor(this) {
             if (it.responseCode == OK) {
                 onSuccess(it)
             }
@@ -27,9 +26,15 @@ fun <T : SubscriptionType> Purchase.acknowledge(
     }
 }
 
-suspend fun <T : SubscriptionType> Purchase.assureAcknowledgement(billing: Billing<T>): Boolean =
+suspend fun Purchase.assureAcknowledgement(acknowledgeFunctor: AcknowledgePurchaseFunctor): Boolean =
     if (purchasedButNotAcknowledged) {
-        acknowledgeByBillingSuspended(billing)
+        callbackFlowWrapper { emit ->
+            acknowledgeFunctor(this) {
+                emit {
+                    it.responseCode == OK
+                }
+            }
+        }()
     } else false
 
 fun Purchase.containsOneTime(purchaseIds: PurchaseIdsContract): Boolean =
@@ -43,20 +48,6 @@ fun Purchase.containsOneTimeOrSub(purchaseIds: PurchaseIdsContract): Boolean =
 
 val Purchase.purchasedButNotAcknowledged: Boolean
     get() = purchaseState == Purchase.PurchaseState.PURCHASED && !isAcknowledged
-
-private suspend fun <T : SubscriptionType> Purchase.acknowledgeByBillingSuspended(billing: Billing<T>): Boolean =
-    callbackFlowWrapper { emit ->
-        acknowledgeByBilling(billing) {
-            emit {
-                it.responseCode == OK
-            }
-        }
-    }()
-
-private fun <T : SubscriptionType> Purchase.acknowledgeByBilling(
-    billing: Billing<T>,
-    onSuccess: (BillingResult) -> Unit,
-) = billing.acknowledge(this, onSuccess)
 
 private typealias PurchaseComparator = (Purchase, PurchaseIdsContract) -> Boolean
 
