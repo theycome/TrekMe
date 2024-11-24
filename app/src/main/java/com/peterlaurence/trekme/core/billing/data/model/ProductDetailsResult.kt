@@ -22,6 +22,9 @@ data class ProductDetailsResult(
 fun ProductDetailsResult.getDetailsById(subId: String): ProductDetails? =
     productDetails.find { it.productId == subId }
 
+fun ProductDetails.SubscriptionOfferDetails.getPricingPhase(comparator: (Long) -> Boolean) =
+    pricingPhases.pricingPhaseList.firstOrNull { comparator(it.priceAmountMicros) }
+
 context(Raise<GetSubscriptionDetailsFailure>)
 fun ProductDetails.toSubscriptionDetails(trialParser: (String) -> Int): SubscriptionDetails {
 
@@ -30,21 +33,17 @@ fun ProductDetails.toSubscriptionDetails(trialParser: (String) -> Int): Subscrip
         ?: raise(GetSubscriptionDetailsFailure.OnlyBasePlanSupported)
 
     /* The trial is the first pricing phase with 0 as price amount */
-    // TODO 1.) - extract into function
-    val trialData =
-        offer.pricingPhases.pricingPhaseList.firstOrNull { it.priceAmountMicros == 0L }
-    val trialInfo = if (trialData == null) {
+    val trialPricingPhase = offer.getPricingPhase { it == 0L }
+    val trialInfo = if (trialPricingPhase == null) {
         TrialUnavailable
     } else {
         // TODO - typify parameter as Days
-        TrialAvailable(trialDurationInDays = trialParser(trialData.billingPeriod))
+        TrialAvailable(trialDurationInDays = trialParser(trialPricingPhase.billingPeriod))
     }
 
     /* The "real" price phase is the first phase with a price other than 0 */
-    // TODO 1.)
-    val realPricePhase = offer.pricingPhases.pricingPhaseList.firstOrNull {
-        it.priceAmountMicros != 0L
-    } ?: raise(GetSubscriptionDetailsFailure.IncorrectPricingPhaseFound)
+    val realPricePhase = offer.getPricingPhase { it != 0L }
+        ?: raise(GetSubscriptionDetailsFailure.IncorrectPricingPhaseFound)
 
     return SubscriptionDetails(
         price = realPricePhase.formattedPrice,
