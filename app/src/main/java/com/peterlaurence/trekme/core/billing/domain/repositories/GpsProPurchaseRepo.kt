@@ -8,7 +8,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.di.MainDispatcher
-import com.peterlaurence.trekme.util.log
+import com.peterlaurence.trekme.util.logCallStack
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -63,7 +63,7 @@ class GpsProPurchaseRepo @Inject constructor(
         scope.launch {
             recover({
                 _subDetailsFlow.value = billing.getSubscriptionDetails(SubscriptionType.Single)
-            }) { this@GpsProPurchaseRepo.log(it) }
+            }) { logCallStack(it) }
         }
     }
 

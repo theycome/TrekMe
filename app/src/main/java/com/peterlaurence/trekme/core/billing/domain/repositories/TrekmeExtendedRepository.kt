@@ -8,7 +8,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.ExtendedOfferStateOwne
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.di.MainDispatcher
-import com.peterlaurence.trekme.util.log
+import com.peterlaurence.trekme.util.logCallStack
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -78,13 +78,13 @@ class TrekmeExtendedRepository @Inject constructor(
             recover({
                 _yearlySubDetailsFlow.value =
                     billingApi.getSubscriptionDetails(SubscriptionType.MonthAndYear.Year)
-            }) { this@TrekmeExtendedRepository.log(it) }
+            }) { logCallStack(it) }
         }
         scope.launch {
             recover({
                 _monthlySubDetailsFlow.value =
                     billingApi.getSubscriptionDetails(SubscriptionType.MonthAndYear.Month)
-            }) { this@TrekmeExtendedRepository.log(it) }
+            }) { logCallStack(it) }
         }
     }
 
