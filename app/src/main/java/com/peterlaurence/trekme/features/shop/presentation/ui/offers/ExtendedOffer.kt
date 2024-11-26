@@ -3,9 +3,17 @@ package com.peterlaurence.trekme.features.shop.presentation.ui.offers
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material.Divider
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,17 +28,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.peterlaurence.trekme.R
-import com.peterlaurence.trekme.core.billing.domain.model.*
+import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
+import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
+import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
+import com.peterlaurence.trekme.core.billing.domain.model.TrialInfo
+import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.accentGreen
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.dark_accentGreen
 import com.peterlaurence.trekme.features.shop.presentation.ui.components.Header
 import com.peterlaurence.trekme.features.shop.presentation.ui.components.PriceButton
+import com.peterlaurence.trekme.util.datetime.format
 
 @Composable
 fun ExtendedOfferHeader(
     purchaseState: PurchaseState,
     monthlySubDetails: SubscriptionDetails?,
-    yearlySubDetails: SubscriptionDetails?
+    yearlySubDetails: SubscriptionDetails?,
 ) {
     /* Monthly and yearly trials should have the same trial duration */
     val monthlyTrial = monthlySubDetails?.trialInfo
@@ -43,7 +56,10 @@ fun ExtendedOfferHeader(
 
 @Composable
 fun ExtendedOfferHeaderPurchased() {
-    Header(title = stringResource(id = R.string.trekme_extended_offer), subTitle = stringResource(id = R.string.module_owned))
+    Header(
+        title = stringResource(id = R.string.trekme_extended_offer),
+        subTitle = stringResource(id = R.string.module_owned)
+    )
 }
 
 @Composable
@@ -53,10 +69,11 @@ private fun ExtendedOfferHeaderUi(purchaseState: PurchaseState, trialInfo: Trial
         PurchaseState.PURCHASED -> stringResource(id = R.string.module_owned)
         PurchaseState.NOT_PURCHASED -> {
             when (trialInfo) {
-                is TrialAvailable -> stringResource(id = R.string.free_trial).format(trialInfo.trialDurationInDays)
+                is TrialAvailable -> trialInfo.duration.format(stringResource(id = R.string.free_trial))
                 TrialUnavailable -> null
             }
         }
+
         PurchaseState.PURCHASE_PENDING -> stringResource(id = R.string.module_check_pending)
         PurchaseState.UNKNOWN -> stringResource(id = R.string.module_error)
     }
@@ -64,7 +81,11 @@ private fun ExtendedOfferHeaderUi(purchaseState: PurchaseState, trialInfo: Trial
 }
 
 @Composable
-fun TrekMeExtendedContent(withIgn: Boolean, purchased: Boolean, onIgnSelectionChanged: (Boolean) -> Unit) {
+fun TrekMeExtendedContent(
+    withIgn: Boolean,
+    purchased: Boolean,
+    onIgnSelectionChanged: (Boolean) -> Unit,
+) {
     CheckSeparator()
     TitleRow(R.string.trekme_extended_maps_title)
     LineItem(R.string.trekme_extended_osm_hd_desc)
@@ -136,7 +157,11 @@ private fun TitleRow(@StringRes id: Int) {
             .padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.Center
     ) {
-        Text(stringResource(id), fontWeight = FontWeight.Medium, style = TextStyle(hyphens = Hyphens.Auto))
+        Text(
+            stringResource(id),
+            fontWeight = FontWeight.Medium,
+            style = TextStyle(hyphens = Hyphens.Auto)
+        )
     }
 }
 
@@ -149,7 +174,9 @@ private fun LineItem(@StringRes id: Int) {
         Text(
             stringResource(id),
             fontSize = 14.sp,
-            modifier = Modifier.padding(start = 8.dp).alignByBaseline(),
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .alignByBaseline(),
             lineHeight = 18.sp,
             style = TextStyle(hyphens = Hyphens.Auto)
         )
@@ -169,10 +196,12 @@ private fun NotaBene() {
 
     Row {
         /* Set alpha to 0.7 for less emphasize */
-        Text(stringResource(id = R.string.nb),
+        Text(
+            stringResource(id = R.string.nb),
             Modifier
                 .alpha(0.7f)
-                .padding(start = 32.dp))
+                .padding(start = 32.dp)
+        )
         Text(
             stringResource(R.string.ign_caution),
             fontSize = 14.sp,
@@ -189,7 +218,7 @@ fun ExtendedOfferFooterNotPurchased(
     monthlySubDetails: SubscriptionDetails?,
     yearlySubDetails: SubscriptionDetails?,
     onMonthlyPurchase: () -> Unit,
-    onYearlyPurchase: () -> Unit
+    onYearlyPurchase: () -> Unit,
 ) {
     ExtendedOfferFooterNotPurchased(
         pricePerMonth = monthlySubDetails?.price,

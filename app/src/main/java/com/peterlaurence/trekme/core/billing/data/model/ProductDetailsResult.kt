@@ -8,6 +8,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
+import com.peterlaurence.trekme.util.datetime.Days
 
 /**
  * Created by Ivan Yakushev on 14.11.2024
@@ -26,7 +27,7 @@ fun ProductDetails.SubscriptionOfferDetails.getPricingPhase(comparator: (Long) -
     pricingPhases.pricingPhaseList.firstOrNull { comparator(it.priceAmountMicros) }
 
 context(Raise<GetSubscriptionDetailsFailure>)
-fun ProductDetails.toSubscriptionDetails(trialParser: (String) -> Int): SubscriptionDetails {
+fun ProductDetails.toSubscriptionDetails(trialParser: (String) -> Days): SubscriptionDetails {
 
     /* For the moment, we only support the base plan */
     val offer = subscriptionOfferDetails?.firstOrNull()
@@ -37,8 +38,7 @@ fun ProductDetails.toSubscriptionDetails(trialParser: (String) -> Int): Subscrip
     val trialInfo = if (trialPricingPhase == null) {
         TrialUnavailable
     } else {
-        // TODO - typify parameter as Days
-        TrialAvailable(trialDurationInDays = trialParser(trialPricingPhase.billingPeriod))
+        TrialAvailable(duration = trialParser(trialPricingPhase.billingPeriod))
     }
 
     /* The "real" price phase is the first phase with a price other than 0 */

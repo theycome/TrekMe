@@ -1,7 +1,17 @@
 package com.peterlaurence.trekme.features.shop.presentation.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -10,7 +20,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,18 +48,26 @@ import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.features.common.presentation.ui.scrollbar.drawVerticalScrollbar
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme
-import com.peterlaurence.trekme.features.shop.presentation.ui.offers.*
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.ExtendedOfferFooterNotPurchased
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.ExtendedOfferFooterPurchased
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.ExtendedOfferHeader
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.ExtendedOfferHeaderPurchased
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.GpsProPurchaseContent
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.GpsProPurchaseFooter
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.GpsProPurchaseHeader
+import com.peterlaurence.trekme.features.shop.presentation.ui.offers.TrekMeExtendedContent
 import com.peterlaurence.trekme.features.shop.presentation.viewmodel.ExtendedOfferViewModel
 import com.peterlaurence.trekme.features.shop.presentation.viewmodel.ExtendedWithIgnViewModel
 import com.peterlaurence.trekme.features.shop.presentation.viewmodel.GpsProPurchaseViewModel
-import java.util.*
+import com.peterlaurence.trekme.util.datetime.days_
+import java.util.UUID
 
 @Composable
 fun ShopStateful(
     extendedWithIgnViewModel: ExtendedWithIgnViewModel = hiltViewModel(),
     extendedOfferViewModel: ExtendedOfferViewModel = hiltViewModel(),
     gpsProPurchaseViewModel: GpsProPurchaseViewModel = hiltViewModel(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
 ) {
     val extendedOfferWithIgnPurchaseState by extendedWithIgnViewModel.purchaseFlow.collectAsState()
     val monthlySubDetailsIgn by extendedWithIgnViewModel.monthlySubscriptionDetailsFlow.collectAsState()
@@ -124,12 +149,13 @@ fun ShopStateful(
 private sealed interface UiState {
     val isIgn: Boolean
 }
+
 private data class Purchased(override val isIgn: Boolean) : UiState
 private data class Selection(
     override val isIgn: Boolean,
     val purchaseState: PurchaseState,
     val monthlySubDetails: SubscriptionDetails?,
-    val yearlySubDetails: SubscriptionDetails?
+    val yearlySubDetails: SubscriptionDetails?,
 ) : UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -142,7 +168,7 @@ private fun ShopUi(
     onExtendedYearlyPurchase: () -> Unit,
     onIgnSelectionChanged: (Boolean) -> Unit,
     onGpsProPurchase: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -275,7 +301,7 @@ private fun ShopCarousel(
 data class OfferUi(
     val header: @Composable () -> Unit,
     val content: @Composable ColumnScope.() -> Unit,
-    val footerButtons: @Composable () -> Unit
+    val footerButtons: @Composable () -> Unit,
 )
 
 @Preview
@@ -289,16 +315,20 @@ private fun ShopUiPreview() {
                 monthlySubDetails = SubscriptionDetails(
                     UUID.randomUUID(),
                     price = "4.99€",
-                    TrialAvailable(3)
+                    TrialAvailable(3.days_)
                 ),
                 yearlySubDetails = SubscriptionDetails(
                     UUID.randomUUID(),
                     price = "15.99€",
-                    TrialAvailable(5)
+                    TrialAvailable(5.days_)
                 )
             ),
             gpsProPurchaseState = PurchaseState.NOT_PURCHASED,
-            subDetails = SubscriptionDetails(UUID.randomUUID(), price = "9.99€", TrialAvailable(3)),
+            subDetails = SubscriptionDetails(
+                UUID.randomUUID(),
+                price = "9.99€",
+                TrialAvailable(3.days_)
+            ),
             onExtendedMonthlyPurchase = {},
             onExtendedYearlyPurchase = {},
             onIgnSelectionChanged = {},

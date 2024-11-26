@@ -1,5 +1,6 @@
 package com.peterlaurence.trekme.core.billing.domain.model
 
+import com.peterlaurence.trekme.util.datetime.Days
 import java.util.UUID
 
 data class SubscriptionDetails(
@@ -9,5 +10,5 @@ data class SubscriptionDetails(
 )
 
 sealed interface TrialInfo
-data class TrialAvailable(val trialDurationInDays: Int) : TrialInfo
+data class TrialAvailable(val duration: Days) : TrialInfo
 data object TrialUnavailable : TrialInfo

@@ -28,6 +28,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import com.peterlaurence.trekme.features.shop.presentation.ui.components.Header
 import com.peterlaurence.trekme.features.shop.presentation.ui.components.PriceButton
+import com.peterlaurence.trekme.util.datetime.format
 
 
 @Composable
@@ -38,7 +39,7 @@ fun GpsProPurchaseHeader(purchaseState: PurchaseState, subDetails: SubscriptionD
         PurchaseState.PURCHASED -> stringResource(id = R.string.module_owned)
         PurchaseState.NOT_PURCHASED -> {
             when (trialInfo) {
-                is TrialAvailable -> stringResource(id = R.string.free_trial).format(trialInfo.trialDurationInDays)
+                is TrialAvailable -> trialInfo.duration.format(stringResource(id = R.string.free_trial))
                 TrialUnavailable -> null
                 null -> stringResource(id = R.string.module_error)
             }
@@ -113,7 +114,7 @@ private val supportedDevices = listOf(
 fun GpsProPurchaseFooter(
     purchaseState: PurchaseState,
     subDetails: SubscriptionDetails?,
-    onPurchase: () -> Unit
+    onPurchase: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     val subscriptionCenterUri = stringResource(id = R.string.subscription_center)
@@ -133,7 +134,7 @@ private fun GpsProPurchaseFooterUi(
     purchaseState: PurchaseState,
     price: String?,
     buyCb: () -> Unit,
-    manageSubscriptionCb: () -> Unit
+    manageSubscriptionCb: () -> Unit,
 ) {
     if (purchaseState == PurchaseState.PURCHASED) {
         Button(

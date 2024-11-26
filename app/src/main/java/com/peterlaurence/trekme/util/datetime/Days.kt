@@ -38,6 +38,8 @@ val Days.long: Long
 val Days.millis: Millis
     get() = duration.toLong(DurationUnit.MILLISECONDS).millis
 
+fun Days.format(template: String) = template.format(this.int)
+
 /**
  * conversions to
  */
