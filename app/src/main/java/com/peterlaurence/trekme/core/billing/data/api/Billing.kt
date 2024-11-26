@@ -28,8 +28,6 @@ import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.util.datetime.Days
-import com.peterlaurence.trekme.util.datetime.days_
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -87,8 +85,6 @@ class Billing<in T : SubscriptionType>(
     private val query = BillingQuery(billingClient, purchaseIds)
 
     private val acknowledgePurchaseFunctor: AcknowledgePurchaseFunctor = query::acknowledgePurchase
-
-    private suspend fun connect() = connector.connect()
 
     /**
      * This is one of the first things to do. If either the one-time or the subscription are among
@@ -154,7 +150,7 @@ class Billing<in T : SubscriptionType>(
         return when (result.billingResult.responseCode) {
             OK -> {
                 result.getDetailsById(subId)?.let { productDetails ->
-                    productDetails.toSubscriptionDetails(::parseTrialPeriodInDays).also {
+                    productDetails.toSubscriptionDetails().also {
                         subscriptionToProductMap[it] = productDetails
                     }
                 } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
@@ -180,22 +176,7 @@ class Billing<in T : SubscriptionType>(
         )
     }
 
-    // TODO - continue with refactoring
-    /**
-     * Trial periods are given in the form "P1W" -> 1 week, or "P4D" -> 4 days.
-     */
-    private fun parseTrialPeriodInDays(period: String): Days {
-
-        if (period.isEmpty()) return 0.days_
-
-        val qty = period.filter { it.isDigit() }.toInt()
-
-        return when (period.lowercase().last()) {
-            'w' -> qty * 7
-            'd' -> qty
-            else -> qty
-        }.days_
-    }
+    private suspend fun connect() = connector.connect()
 
     private fun callPurchasePendingCallback() {
         if (::purchasePendingCallback.isInitialized) {
@@ -203,6 +184,7 @@ class Billing<in T : SubscriptionType>(
         }
     }
 
+    // TODO - continue with refactoring
     private fun consume(purchase: Purchase) {
         val params = ConsumeParams.newBuilder()
             .setPurchaseToken(purchase.purchaseToken)
