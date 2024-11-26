@@ -155,9 +155,8 @@ class Billing<in T : SubscriptionType>(
         return when (result.billingResult.responseCode) {
             OK -> {
                 result.getDetailsById(subId)?.let { productDetails ->
-                    productDetails.toSubscriptionDetails(::parseTrialPeriodInDays).let {
+                    productDetails.toSubscriptionDetails(::parseTrialPeriodInDays).also {
                         subscriptionToProductMap[it] = productDetails
-                        it
                     }
                 } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
             }
