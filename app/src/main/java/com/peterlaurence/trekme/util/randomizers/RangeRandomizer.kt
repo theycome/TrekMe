@@ -8,7 +8,7 @@ import kotlin.random.Random
 open class RangeRandomizer<T : Comparable<T>, R : ClosedRange<T>>(
     private val size: Int,
     range: R,
-    hasRangeBorders: Boolean,
+    includesRangeBorders: Boolean,
     generate: (T, T) -> T,
 ) : Iterator<Pair<T, T>> {
 
@@ -17,7 +17,7 @@ open class RangeRandomizer<T : Comparable<T>, R : ClosedRange<T>>(
     private val values = Array(size) {
         generate(range.start, range.endInclusive) to generate(range.start, range.endInclusive)
     }.apply {
-        if (hasRangeBorders) {
+        if (includesRangeBorders) {
             this[0] = range.start to range.endInclusive
         }
     }
@@ -36,21 +36,21 @@ open class RangeRandomizer<T : Comparable<T>, R : ClosedRange<T>>(
 class IntRangeRandomizer(
     size: Int,
     range: IntRange,
-    hasRangeBorders: Boolean = true,
+    includesRangeBorders: Boolean = true,
 ) : RangeRandomizer<Int, IntRange>(
     size = size,
     range = range,
-    hasRangeBorders = hasRangeBorders,
+    includesRangeBorders = includesRangeBorders,
     generate = Random::nextInt,
 )
 
 class LongRangeRandomizer(
     size: Int,
     range: LongRange,
-    hasRangeBorders: Boolean = true,
+    includesRangeBorders: Boolean = true,
 ) : RangeRandomizer<Long, LongRange>(
     size = size,
     range = range,
-    hasRangeBorders = hasRangeBorders,
+    includesRangeBorders = includesRangeBorders,
     generate = Random::nextLong,
 )
