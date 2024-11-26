@@ -7,7 +7,6 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
-import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
@@ -167,7 +166,6 @@ class Billing<in T : SubscriptionType>(
         }
     }
 
-    // TODO - continue with refactoring
     override fun launchBilling(
         subscription: SubscriptionDetails,
         onPurchasePending: () -> Unit,
@@ -175,25 +173,14 @@ class Billing<in T : SubscriptionType>(
         val productDetails = subscriptionToProductMap[subscription] ?: return
         val offerToken = productDetails.subscriptionOfferDetails?.get(0)?.offerToken ?: return
 
-        val productDetailsParamsList =
-            listOf(
-                BillingFlowParams.ProductDetailsParams.newBuilder()
-                    .setProductDetails(productDetails)
-                    .setOfferToken(offerToken)
-                    .build()
-            )
-        val flowParams =
-            BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(productDetailsParamsList)
-                .build()
-
-        val billingParams = BillingParams(billingClient, flowParams)
-
         /* Since we need an Activity to start the billing flow, we send an event which the activity
          * is listening */
-        appEventBus.startBillingFlow(billingParams)
+        appEventBus.startBillingFlow(
+            BillingParams(billingClient, productDetails, offerToken)
+        )
     }
 
+    // TODO - continue with refactoring
     /**
      * Trial periods are given in the form "P1W" -> 1 week, or "P4D" -> 4 days.
      */
