@@ -3,6 +3,7 @@ package com.peterlaurence.trekme.core.billing.data.api
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
@@ -12,6 +13,7 @@ import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.PurchasesResult
 import com.peterlaurence.trekme.core.billing.data.model.getPurchase
 import com.peterlaurence.trekme.util.callbackFlowWrapper
+import com.peterlaurence.trekme.util.log
 
 /**
  * Created by Ivan Yakushev on 14.11.2024
@@ -54,6 +56,15 @@ class BillingQuery(
             .build()
         billingClient.acknowledgePurchase(params) {
             onSuccess(it)
+        }
+    }
+
+    fun consume(purchase: Purchase) {
+        val params = ConsumeParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        billingClient.consumeAsync(params) { _, _ ->
+            this.log("Consumed the purchase. It can now be bought again.")
         }
     }
 

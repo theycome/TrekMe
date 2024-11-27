@@ -1,13 +1,11 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
-import android.util.Log
 import arrow.core.raise.Raise
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED
-import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
@@ -123,7 +121,7 @@ class Billing<in T : SubscriptionType>(
                         Date().time.millis
                     ) !is AccessGranted
                 ) {
-                    consume(this)
+                    query.consume(this)
                     null
                 } else this
             }
@@ -183,16 +181,4 @@ class Billing<in T : SubscriptionType>(
         }
     }
 
-    // TODO - continue with refactoring
-    private fun consume(purchase: Purchase) {
-        val params = ConsumeParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
-        billingClient.consumeAsync(params) { _, _ ->
-            Log.i(TAG, "Consumed the purchase. It can now be bought again.")
-        }
-    }
-
 }
-
-private const val TAG = "Billing.kt"
