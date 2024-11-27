@@ -64,7 +64,7 @@ class BillingQuery(
             .setPurchaseToken(purchase.purchaseToken)
             .build()
         billingClient.consumeAsync(params) { _, _ ->
-            this.log("Consumed the purchase. It can now be bought again.")
+            log("Consumed the purchase. It can now be bought again.")
         }
     }
 
