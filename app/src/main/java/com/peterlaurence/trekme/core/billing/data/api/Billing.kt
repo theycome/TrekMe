@@ -21,7 +21,6 @@ import com.peterlaurence.trekme.core.billing.data.model.acknowledge
 import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
 import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
 import com.peterlaurence.trekme.core.billing.data.model.getDetailsById
-import com.peterlaurence.trekme.core.billing.data.model.toSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
@@ -150,7 +149,7 @@ class Billing<in T : SubscriptionType>(
         return when (result.billingResult.responseCode) {
             OK -> {
                 result.getDetailsById(subId)?.let { productDetails ->
-                    productDetails.toSubscriptionDetails().also {
+                    SubscriptionDetails(productDetails).also {
                         subscriptionToProductMap[it] = productDetails
                     }
                 } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
