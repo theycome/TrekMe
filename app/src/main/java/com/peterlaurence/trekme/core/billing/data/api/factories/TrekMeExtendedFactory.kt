@@ -19,8 +19,8 @@ fun buildTrekmeExtendedBilling(
 
     val ids = PurchaseIdsMonthYear(
         oneTimeId = TREKME_EXTENDED_ONETIME_SKU,
-        subIdMonth = TREKME_EXTENDED_SUBSCRIPTION_MONTH_SKU,
         subIdYear = TREKME_EXTENDED_SUBSCRIPTION_YEAR_SKU,
+        subIdMonth = TREKME_EXTENDED_SUBSCRIPTION_MONTH_SKU,
     )
 
     return Billing(

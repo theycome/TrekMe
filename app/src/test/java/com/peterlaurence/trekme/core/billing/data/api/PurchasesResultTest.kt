@@ -49,7 +49,7 @@ class PurchasesResultTest {
 
         val ids = listOf(
             PurchaseIdsSingle("99", ""),
-            PurchaseIdsMonthYear("A", "1", "2"),
+            PurchaseIdsMonthYear("A", "2", "1"),
         )
 
         ids.forEach {
@@ -68,7 +68,7 @@ class PurchasesResultTest {
 
         val ids = listOf(
             PurchaseIdsSingle("B", "99"),
-            PurchaseIdsMonthYear("BB", "99", "A"),
+            PurchaseIdsMonthYear("BB", "A", "99"),
             PurchaseIdsSingle("", "2"),
         )
 
@@ -86,7 +86,7 @@ class PurchasesResultTest {
     fun `getPurchase SUB success`() {
 
         val ids = listOf(
-            PurchaseIdsMonthYear("", "2", "333"),
+            PurchaseIdsMonthYear("", "333", "2"),
             PurchaseIdsSingle("W", "99"),
             PurchaseIdsSingle("WWW", "a"),
         )
@@ -128,7 +128,7 @@ class PurchasesResultTest {
     fun `getPurchase VALID_ONE_TIME success`() {
 
         val ids = listOf(
-            PurchaseIdsMonthYear("A", "1", "2"),
+            PurchaseIdsMonthYear("A", "2", "1"),
             PurchaseIdsSingle("3", ""),
             PurchaseIdsSingle("a", ""),
         )
@@ -149,7 +149,7 @@ class PurchasesResultTest {
     fun `getPurchase VALID_ONE_TIME failure`() {
 
         val ids = listOf(
-            PurchaseIdsMonthYear("C", "1", "3"),
+            PurchaseIdsMonthYear("C", "3", "1"),
             PurchaseIdsSingle("99", "2"),
             PurchaseIdsSingle("", "A"),
             PurchaseIdsSingle("w", "115"),
@@ -171,8 +171,8 @@ class PurchasesResultTest {
     fun `getPurchase VALID_SUB success`() {
 
         val ids = listOf(
-            PurchaseIdsMonthYear("A", "3", "99"),
-            PurchaseIdsMonthYear("", "a", "C"),
+            PurchaseIdsMonthYear("A", "99", "3"),
+            PurchaseIdsMonthYear("", "C", "a"),
             PurchaseIdsSingle("a", "A"),
         )
 
@@ -194,7 +194,7 @@ class PurchasesResultTest {
         val ids = listOf(
             PurchaseIdsSingle("A", ""),
             PurchaseIdsSingle("a", ""),
-            PurchaseIdsMonthYear("", "_", "C"),
+            PurchaseIdsMonthYear("", "C", "_"),
             PurchaseIdsSingle("a", "99"),
             PurchaseIdsSingle("a", "aa"),
         )

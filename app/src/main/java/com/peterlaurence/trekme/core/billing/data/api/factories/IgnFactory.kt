@@ -19,8 +19,8 @@ fun buildIgnBilling(
 
     val ids = PurchaseIdsMonthYear(
         oneTimeId = IGN_ONETIME_SKU,
-        subIdMonth = IGN_SUBSCRIPTION_MONTH_SKU,
         subIdYear = IGN_SUBSCRIPTION_YEAR_SKU,
+        subIdMonth = IGN_SUBSCRIPTION_MONTH_SKU,
     )
 
     return Billing(

@@ -27,21 +27,6 @@ class BillingQuery(
         queryPurchasesResult(type)
             .getPurchase(type, purchaseIds)
 
-    suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
-
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(type.productType)
-            .build()
-
-        return callbackFlowWrapper { emit ->
-            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
-                emit {
-                    PurchasesResult(billingResult, purchases)
-                }
-            }
-        }()
-    }
-
     suspend fun queryProductDetailsResult(subId: String): ProductDetailsResult {
 
         val product = QueryProductDetailsParams.Product.newBuilder()
@@ -81,6 +66,21 @@ class BillingQuery(
         billingClient.consumeAsync(params) { _, _ ->
             log("Consumed the purchase. It can now be bought again.")
         }
+    }
+
+    private suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
+
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(type.productType)
+            .build()
+
+        return callbackFlowWrapper { emit ->
+            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
+                emit {
+                    PurchasesResult(billingResult, purchases)
+                }
+            }
+        }()
     }
 
 }

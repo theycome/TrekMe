@@ -2,6 +2,18 @@ package com.peterlaurence.trekme.core.billing.data.model
 
 /**
  * Created by Ivan Yakushev on 24.10.2024
+ *
+ * Purchase (billing api) holds a flat list of all String ids
+ *
+ * Our domain distinguishes between two types of ids
+ * - [PurchaseIdsContract.oneTimeId]
+ * - [PurchaseIdsContract.subIdList]
+ *
+ * Then we further refine this view by providing two model classes
+ * - [PurchaseIdsSingle]
+ * - [PurchaseIdsMonthYear]
+ *
+ * [PurchaseType] serves as a dispatcher between api constants and our model classes
  */
 interface PurchaseIdsContract {
 
@@ -36,8 +48,8 @@ data class PurchaseIdsSingle(
 
 data class PurchaseIdsMonthYear(
     override val oneTimeId: String,
-    private val subIdMonth: String,
     private val subIdYear: String,
+    private val subIdMonth: String,
 ) : PurchaseIdsContract, PurchaseIdsResolver<SubscriptionType.MonthAndYear> {
 
     override val subIdList: List<String> = listOf(subIdMonth, subIdYear)
