@@ -3,6 +3,8 @@ package com.peterlaurence.trekme.core.billing.data.api
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.ProductDetailsResponseListener
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesResponseListener
 import com.android.billingclient.api.QueryPurchasesParams
@@ -59,14 +61,7 @@ class BillingQueryTest {
     private val purchaseMonthYearValidMock = mock(Purchase::class.java)
     private val purchaseMonthYearInvalidMock = mock(Purchase::class.java)
 
-    @Mock
-    private lateinit var billingClientMock: BillingClient
-
-    @Mock
-    private lateinit var billingResultMock: BillingResult
-
-    @BeforeTest
-    fun init() {
+    private fun initPurchaseMocks() {
         `when`(purchaseOneTimeValidMock.products).thenReturn(listOf(singleOneTimeId, singleSubId))
         `when`(purchaseOneTimeValidMock.isAcknowledged).thenReturn(true)
 
@@ -90,6 +85,28 @@ class BillingQueryTest {
             )
         )
         `when`(purchaseMonthYearInvalidMock.isAcknowledged).thenReturn(false)
+    }
+
+    private val productDetailsSingleSubMock = mock(ProductDetails::class.java)
+    private val productDetailsYearSubMock = mock(ProductDetails::class.java)
+    private val productDetailsMonthSubMock = mock(ProductDetails::class.java)
+
+    private fun initProductDetailsMock() {
+        `when`(productDetailsSingleSubMock.productId).thenReturn(singleSubId)
+        `when`(productDetailsYearSubMock.productId).thenReturn(monthYearSubYearId)
+        `when`(productDetailsMonthSubMock.productId).thenReturn(monthYearSubMonthId)
+    }
+
+    @Mock
+    private lateinit var billingClientMock: BillingClient
+
+    @Mock
+    private lateinit var billingResultMock: BillingResult
+
+    @BeforeTest
+    fun init() {
+        initPurchaseMocks()
+        initProductDetailsMock()
     }
 
     @Captor
@@ -156,6 +173,23 @@ class BillingQueryTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `queryProductDetailsResult check callback working`() = runTest {
+
+        val query = BillingQuery(billingClientMock, purchaseIdsSingle)
+
+        doAnswer { invocation ->
+            val listener: ProductDetailsResponseListener = invocation.getArgument(1)
+            listener.onProductDetailsResponse(
+                billingResultMock,
+                listOf(productDetailsSingleSubMock)
+            )
+        }.`when`(billingClientMock)
+            .queryProductDetailsAsync(any(), any())
+
+        query.queryProductDetailsResult("any").productDetails shouldContain productDetailsSingleSubMock
     }
 
 }
