@@ -11,6 +11,7 @@ import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsMonthYear
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsSingle
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -102,165 +103,58 @@ class BillingQueryTest {
     )
 
     @Test
-    fun `queryPurchase ONE_TIME`() {
+    fun `queryPurchasesResult runner`() {
 
-        queryPurchase(
-            PurchaseType.ONE_TIME,
+        queryPurchasesResult(
             purchaseIdsSingle,
-            purchaseOneTimeValidMock,
-            true,
+            listOf(
+                PurchaseType.ONE_TIME,
+                PurchaseType.VALID_ONE_TIME,
+                PurchaseType.SUB,
+                PurchaseType.VALID_SUB
+            ),
+            listOf(purchaseOneTimeValidMock, purchaseOneTimeInvalidMock),
         )
 
-        queryPurchase(
-            PurchaseType.ONE_TIME,
-            purchaseIdsSingle,
-            purchaseOneTimeInvalidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.ONE_TIME,
+        queryPurchasesResult(
             purchaseIdsMonthYear,
-            purchaseMonthYearValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.ONE_TIME,
-            purchaseIdsMonthYear,
-            purchaseMonthYearInvalidMock,
-            true,
+            listOf(
+                PurchaseType.ONE_TIME,
+                PurchaseType.VALID_ONE_TIME,
+                PurchaseType.SUB,
+                PurchaseType.VALID_SUB
+            ),
+            listOf(purchaseOneTimeValidMock, purchaseOneTimeInvalidMock),
         )
 
     }
 
-    @Test
-    fun `queryPurchase SUB`() {
-
-        queryPurchase(
-            PurchaseType.SUB,
-            purchaseIdsSingle,
-            purchaseOneTimeValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.SUB,
-            purchaseIdsSingle,
-            purchaseOneTimeInvalidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.SUB,
-            purchaseIdsMonthYear,
-            purchaseMonthYearValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.SUB,
-            purchaseIdsMonthYear,
-            purchaseMonthYearInvalidMock,
-            true,
-        )
-
-    }
-
-    @Test
-    fun `queryPurchase VALID_ONE_TIME`() {
-
-        queryPurchase(
-            PurchaseType.VALID_ONE_TIME,
-            purchaseIdsSingle,
-            purchaseOneTimeValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.VALID_ONE_TIME,
-            purchaseIdsSingle,
-            purchaseOneTimeInvalidMock,
-            false,
-        )
-
-        queryPurchase(
-            PurchaseType.VALID_ONE_TIME,
-            purchaseIdsMonthYear,
-            purchaseMonthYearValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.VALID_ONE_TIME,
-            purchaseIdsMonthYear,
-            purchaseMonthYearInvalidMock,
-            false,
-        )
-
-    }
-
-    @Test
-    fun `queryPurchase VALID_SUB`() {
-
-        queryPurchase(
-            PurchaseType.VALID_SUB,
-            purchaseIdsSingle,
-            purchaseOneTimeValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.VALID_SUB,
-            purchaseIdsSingle,
-            purchaseOneTimeInvalidMock,
-            false,
-        )
-
-        queryPurchase(
-            PurchaseType.VALID_SUB,
-            purchaseIdsMonthYear,
-            purchaseMonthYearValidMock,
-            true,
-        )
-
-        queryPurchase(
-            PurchaseType.VALID_SUB,
-            purchaseIdsMonthYear,
-            purchaseMonthYearInvalidMock,
-            false,
-        )
-
-    }
-
-    private fun queryPurchase(
-        purchaseType: PurchaseType,
+    private fun queryPurchasesResult(
         idsContract: PurchaseIdsContract,
-        purchaseMock: Purchase,
-        isPurchaseShouldBeFound: Boolean,
+        purchaseTypes: List<PurchaseType>,
+        purchaseMocks: List<Purchase>,
     ) = runTest {
-        withClue("$purchaseType | $idsContract | $purchaseMock") {
+        purchaseTypes.forEach { purchaseType ->
+            purchaseMocks.forEach { purchase ->
+                withClue("$idsContract | $purchaseType | $purchase") {
 
-            val query = BillingQuery(billingClientMock, idsContract)
+                    val query = BillingQuery(billingClientMock, idsContract)
 
-            // mock billingClient.queryPurchasesAsync to return PurchasesResult(any, list<Purchase>)
-            doAnswer { invocation ->
-                val listener: PurchasesResponseListener = invocation.getArgument(1)
-                listener.onQueryPurchasesResponse(billingResultMock, listOf(purchaseMock))
-            }.`when`(billingClientMock)
-                .queryPurchasesAsync(queryPurchasesParamsCaptor.capture(), any())
+                    // mock billingClient.queryPurchasesAsync to return PurchasesResult(any, list<Purchase>)
+                    doAnswer { invocation ->
+                        val listener: PurchasesResponseListener = invocation.getArgument(1)
+                        listener.onQueryPurchasesResponse(billingResultMock, listOf(purchase))
+                    }.`when`(billingClientMock)
+                        .queryPurchasesAsync(queryPurchasesParamsCaptor.capture(), any())
 
-            // invoke BillingQuery.queryPurchase()
-            // assert whether the correct Purchase is returned
-            if (isPurchaseShouldBeFound) {
-                query.queryPurchase(purchaseType) shouldBe purchaseMock
-            } else {
-                query.queryPurchase(purchaseType) shouldBe null
+                    // invoke BillingQuery.queryPurchase()
+                    // assert whether the correct Purchase is returned
+                    query.queryPurchasesResult(purchaseType).purchases shouldContain purchase
+
+                    // verify that a correct product type is passed to billingClient.queryPurchasesAsync(params)
+                    queryPurchasesParamsCaptor.value.zza() shouldBe purchaseTypeToApiStringMap[purchaseType]
+                }
             }
-
-            // verify that a correct product type is passed to billingClient.queryPurchasesAsync(params)
-            queryPurchasesParamsCaptor.value.zza() shouldBe purchaseTypeToApiStringMap[purchaseType]
-
         }
     }
 
