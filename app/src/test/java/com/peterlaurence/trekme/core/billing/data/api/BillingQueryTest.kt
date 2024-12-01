@@ -88,13 +88,9 @@ class BillingQueryTest {
     }
 
     private val productDetailsSingleSubMock = mock(ProductDetails::class.java)
-    private val productDetailsYearSubMock = mock(ProductDetails::class.java)
-    private val productDetailsMonthSubMock = mock(ProductDetails::class.java)
 
     private fun initProductDetailsMock() {
         `when`(productDetailsSingleSubMock.productId).thenReturn(singleSubId)
-        `when`(productDetailsYearSubMock.productId).thenReturn(monthYearSubYearId)
-        `when`(productDetailsMonthSubMock.productId).thenReturn(monthYearSubMonthId)
     }
 
     @Mock
