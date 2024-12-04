@@ -67,11 +67,10 @@ class BillingConnector(private val billingClient: BillingClient) {
      * instance.
      */
     private fun connectClient() {
-        with(billingClient) {
-            if (isReady)
-                connected = true
-            else
-                startConnection(connectionStateListener)
+        if (billingClient.isReady) {
+            connected = true
+        } else {
+            billingClient.startConnection(connectionStateListener)
         }
     }
 
