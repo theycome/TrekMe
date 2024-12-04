@@ -10,7 +10,6 @@ import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
-import com.peterlaurence.trekme.core.billing.data.model.BillingParams
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsResolver
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
@@ -20,11 +19,13 @@ import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
 import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
 import com.peterlaurence.trekme.core.billing.data.model.getDetailsById
 import com.peterlaurence.trekme.core.billing.data.model.offerToken
+import com.peterlaurence.trekme.core.billing.data.model.toBillingParams
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
+import com.peterlaurence.trekme.core.billing.domain.model.toSubscriptionDetails
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.Millis
 import com.peterlaurence.trekme.util.datetime.millis
@@ -108,6 +109,13 @@ class Billing<in T : SubscriptionType>(
         return oneTimeAcknowledged || subAcknowledged
     }
 
+    // TODO - mock-test
+    // path VALID_ONE_TIME not null
+    // - check purchaseVerifier.checkTime gets now time close enough to UTC one
+    // -- when returned AccessGranted - no query.consume call
+    // --      else - query.consume call
+    // path VALID_ONE_TIME is null
+    // - check query.queryPurchase(PurchaseType.VALID_SUB) call with a correct parameter
     override suspend fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase(): Boolean {
         if (!connect()) return false
 
@@ -148,7 +156,7 @@ class Billing<in T : SubscriptionType>(
         return when (result.billingResult.responseCode) {
             OK -> {
                 result.getDetailsById(subId)?.let { productDetails ->
-                    SubscriptionDetails(productDetails).also {
+                    productDetails.toSubscriptionDetails().also {
                         subscriptionToProductMap[it] = productDetails
                     }
                 } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))
@@ -168,10 +176,8 @@ class Billing<in T : SubscriptionType>(
         val offerToken = productDetails.offerToken() ?: return
 
         /* Since we need an Activity to start the billing flow, we send an event which the activity
-         * is listening */
-        appEventBus.startBillingFlow(
-            BillingParams(billingClient, productDetails, offerToken)
-        )
+         * is listening to */
+        appEventBus.startBillingFlow(billingClient.toBillingParams(productDetails, offerToken))
     }
 
     private suspend fun connect() = connector.connect()

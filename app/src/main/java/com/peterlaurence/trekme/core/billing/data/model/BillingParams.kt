@@ -33,3 +33,12 @@ data class BillingParams(val billingClient: BillingClient, val flowParams: Billi
     }
 
 }
+
+fun BillingClient.toBillingParams(
+    productDetails: ProductDetails,
+    offerToken: String,
+): BillingParams = BillingParams(
+    billingClient = this,
+    productDetails = productDetails,
+    offerToken = offerToken,
+)

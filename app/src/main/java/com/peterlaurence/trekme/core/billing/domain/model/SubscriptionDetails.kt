@@ -40,3 +40,7 @@ data class SubscriptionDetails(
     }
 
 }
+
+context(Raise<GetSubscriptionDetailsFailure>)
+fun ProductDetails.toSubscriptionDetails(): SubscriptionDetails =
+    SubscriptionDetails(productDetails = this)
