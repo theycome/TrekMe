@@ -10,7 +10,7 @@ interface BillingApi<in T : SubscriptionType> {
 
     val purchaseAcknowledgedEvent: Flow<Unit>
 
-    suspend fun queryWhetherWeHavePurchases(): Boolean
+    suspend fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase(): Boolean
 
     suspend fun queryAndAcknowledgePurchases(): Boolean
 

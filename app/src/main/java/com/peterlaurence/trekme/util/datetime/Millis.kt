@@ -8,6 +8,7 @@ import com.peterlaurence.trekme.util.ext.plusSafe
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.Date
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -58,6 +59,8 @@ value class Millis(val long: Long) {
 
         fun now(): Millis =
             LocalDateTime.now().withNano(0).millis
+
+        fun nowUTC(): Millis = Date().time.millis
 
     }
 

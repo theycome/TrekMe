@@ -26,6 +26,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.events.AppEventBus
+import com.peterlaurence.trekme.util.datetime.Millis
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -107,10 +108,7 @@ class Billing<in T : SubscriptionType>(
         return oneTimeAcknowledged || subAcknowledged
     }
 
-    /**
-     * Also has a side effect of consuming not granted one time licenses
-     */
-    override suspend fun queryWhetherWeHavePurchases(): Boolean {
+    override suspend fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase(): Boolean {
         if (!connect()) return false
 
         val oneTime = query.queryPurchase(PurchaseType.VALID_ONE_TIME)
@@ -120,15 +118,17 @@ class Billing<in T : SubscriptionType>(
             }
 
             else -> {
-                consumeIfNecessary(oneTime)
+                consumeIfNotGrantedAccess(oneTime)
                 true
             }
         }
     }
 
-    private fun consumeIfNecessary(purchase: Purchase) {
-        if (purchaseVerifier.checkTime(purchase.purchaseTime.millis) !is AccessGranted) {
-            query.consume(purchase)
+    private fun consumeIfNotGrantedAccess(purchase: Purchase) {
+        val state = purchaseVerifier.checkTime(purchase.purchaseTime.millis, Millis.nowUTC())
+        when (state) {
+            is AccessGranted -> {}
+            else -> query.consume(purchase)
         }
     }
 

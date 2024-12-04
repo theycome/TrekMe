@@ -1,11 +1,9 @@
 package com.peterlaurence.trekme.core.billing.domain.model
 
 import com.peterlaurence.trekme.util.datetime.Millis
-import com.peterlaurence.trekme.util.datetime.millis
-import java.util.Date
 
 interface PurchaseVerifier {
-    fun checkTime(purchaseTime: Millis, now: Millis = Date().time.millis): AccessState
+    fun checkTime(purchaseTime: Millis, now: Millis): AccessState
 }
 
 sealed class AccessState

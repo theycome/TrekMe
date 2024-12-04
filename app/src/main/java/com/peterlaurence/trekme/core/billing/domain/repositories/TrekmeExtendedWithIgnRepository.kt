@@ -56,7 +56,7 @@ class TrekmeExtendedWithIgnRepository @Inject constructor(
     }
 
     suspend fun updatePurchaseState() {
-        val result = if (billingApi.queryWhetherWeHavePurchases()) {
+        val result = if (billingApi.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()) {
             PurchaseState.PURCHASED
         } else {
             updateSubscriptionInfo()
