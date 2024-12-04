@@ -19,3 +19,6 @@ fun ProductDetailsResult.getDetailsById(subId: String): ProductDetails? =
 
 fun ProductDetails.SubscriptionOfferDetails.getPricingPhase(comparator: (Long) -> Boolean) =
     pricingPhases.pricingPhaseList.firstOrNull { comparator(it.priceAmountMicros) }
+
+fun ProductDetails.offerToken() =
+    subscriptionOfferDetails?.get(0)?.offerToken

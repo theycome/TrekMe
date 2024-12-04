@@ -19,6 +19,7 @@ import com.peterlaurence.trekme.core.billing.data.model.acknowledge
 import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
 import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
 import com.peterlaurence.trekme.core.billing.data.model.getDetailsById
+import com.peterlaurence.trekme.core.billing.data.model.offerToken
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
@@ -164,7 +165,7 @@ class Billing<in T : SubscriptionType>(
         onPurchasePending: () -> Unit,
     ) {
         val productDetails = subscriptionToProductMap[subscription] ?: return
-        val offerToken = productDetails.subscriptionOfferDetails?.get(0)?.offerToken ?: return
+        val offerToken = productDetails.offerToken() ?: return
 
         /* Since we need an Activity to start the billing flow, we send an event which the activity
          * is listening */
