@@ -120,9 +120,12 @@ fun <T> launchFlowCollectionWithLifecycle(
  * }() // note a lambda invoke syntax "()"
  * ```
  *
+ * Wraps `callbackFlow` usage for a simple scenario when we make a call to api
+ * and then get a result from it, send it to Flow (wrapped into our model class)
+ * and then wait on a Flow to deliver the result using `first()` to return it at last to our upstream
+ *
  * @throws IllegalStateException if lambda passed into parameter `block`,
  * and eventually the invocation of `trySend`, was not performed exactly once by the client
- *
  */
 suspend fun <R> callbackFlowWrapper(block: ((R) -> Unit) -> Unit): R {
     var sendCallCount = 0
