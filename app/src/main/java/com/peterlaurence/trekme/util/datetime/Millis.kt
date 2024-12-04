@@ -57,7 +57,7 @@ value class Millis(val long: Long) {
 
         val allowableRangeNoOverflows = allowableRange.first / 2..allowableRange.last / 2
 
-        fun now(): Millis =
+        fun nowDefaultTimeZone(): Millis =
             LocalDateTime.now().withNano(0).millis
 
         fun nowUTC(): Millis = Date().time.millis

@@ -22,7 +22,7 @@ class AnnualWithGracePeriodVerifierTest {
     private val gracePeriod = AnnualWithGracePeriodVerifier.GRACE_PERIOD
     private val validityDuration = AnnualWithGracePeriodVerifier.VALIDITY_DURATION
     private val verifier = AnnualWithGracePeriodVerifier()
-    private val now = Millis.now()
+    private val now = Millis.nowDefaultTimeZone()
 
     @Test
     fun `checkTime future`() {
