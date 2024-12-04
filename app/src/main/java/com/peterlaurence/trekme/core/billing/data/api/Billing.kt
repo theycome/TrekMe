@@ -28,7 +28,6 @@ import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.millis
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import java.util.Date
 
 /**
  * Manages a subscription along with a one-time purchase.
@@ -108,27 +107,28 @@ class Billing<in T : SubscriptionType>(
     }
 
     /**
-     * Also has a side effect of consuming not granted one time licenses...
+     * Also has a side effect of consuming not granted one time licenses
      */
     override suspend fun queryPurchasesBeingPurchased(): Boolean {
         if (!connect()) return false
 
-        val oneTimeLicense =
-            query.queryPurchase(PurchaseType.VALID_ONE_TIME)?.run {
-                if (
-                    purchaseVerifier.checkTime(
-                        purchaseTime.millis,
-                        Date().time.millis
-                    ) !is AccessGranted
-                ) {
-                    query.consume(this)
-                    null
-                } else this
+        val oneTime = query.queryPurchase(PurchaseType.VALID_ONE_TIME)
+        return when (oneTime) {
+            null -> {
+                query.queryPurchase(PurchaseType.VALID_SUB) != null
             }
 
-        return if (oneTimeLicense == null) {
-            query.queryPurchase(PurchaseType.VALID_SUB) != null
-        } else true
+            else -> {
+                consumeIfNecessary(oneTime)
+                true
+            }
+        }
+    }
+
+    private fun consumeIfNecessary(purchase: Purchase) {
+        if (purchaseVerifier.checkTime(purchase.purchaseTime.millis) !is AccessGranted) {
+            query.consume(purchase)
+        }
     }
 
     /**
