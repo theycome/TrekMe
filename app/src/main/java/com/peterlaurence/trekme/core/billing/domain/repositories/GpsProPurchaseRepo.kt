@@ -45,7 +45,7 @@ class GpsProPurchaseRepo @Inject constructor(
 
             /* Otherwise, do normal checks */
             if (!ackDone) {
-                val result = if (billing.queryPurchasesBeingPurchased()) {
+                val result = if (billing.queryWhetherWeHavePurchases()) {
                     PurchaseState.PURCHASED
                 } else {
                     updateSubscriptionInfo()

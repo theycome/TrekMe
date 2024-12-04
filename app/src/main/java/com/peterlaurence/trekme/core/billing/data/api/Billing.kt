@@ -109,7 +109,7 @@ class Billing<in T : SubscriptionType>(
     /**
      * Also has a side effect of consuming not granted one time licenses
      */
-    override suspend fun queryPurchasesBeingPurchased(): Boolean {
+    override suspend fun queryWhetherWeHavePurchases(): Boolean {
         if (!connect()) return false
 
         val oneTime = query.queryPurchase(PurchaseType.VALID_ONE_TIME)
