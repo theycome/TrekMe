@@ -47,13 +47,10 @@ class Billing<in T : SubscriptionType>(
     private val appEventBus: AppEventBus,
 ) : BillingApi<T> {
 
+    // TODO? - extract private members into BillingData class to enable mock-testing Billing
+
     override val purchaseAcknowledgedEvent =
         MutableSharedFlow<Unit>(0, 1, BufferOverflow.DROP_OLDEST)
-
-    /**
-     * seems to stay uninitialized, and thus unused...
-     */
-    private lateinit var purchasePendingCallback: () -> Unit
 
     private val purchaseUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (purchases != null && billingResult.responseCode == OK) {
@@ -62,7 +59,7 @@ class Billing<in T : SubscriptionType>(
                     purchase.acknowledge(
                         acknowledgePurchaseFunctor,
                         onSuccess = { purchaseAcknowledgedEvent.tryEmit(Unit) },
-                        onPending = { callPurchasePendingCallback() }
+                        onPending = { }
                     )
                 }
             }
@@ -181,11 +178,5 @@ class Billing<in T : SubscriptionType>(
     }
 
     private suspend fun connect() = connector.connect()
-
-    private fun callPurchasePendingCallback() {
-        if (::purchasePendingCallback.isInitialized) {
-            purchasePendingCallback()
-        }
-    }
 
 }
