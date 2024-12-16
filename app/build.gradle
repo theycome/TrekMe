@@ -113,7 +113,6 @@ dependencies {
     testImplementation "io.kotest:kotest-assertions-core:$kotest_version"
     testImplementation "io.kotest:kotest-property:$kotest_version"
     testImplementation 'org.mockito:mockito-core:5.14.2'
-    //testImplementation "org.powermock:powermock-api-mockito2:2.0.9"
     implementation "io.arrow-kt:arrow-core:1.2.4"
 }
 repositories {
