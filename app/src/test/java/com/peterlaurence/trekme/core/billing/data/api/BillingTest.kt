@@ -26,7 +26,10 @@ class BillingTest {
     val rule: MockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS)
 
     @Mock
-    private lateinit var billingMock: Billing<SubscriptionType.Single> //  = mock(Billing::class.java)
+    private lateinit var billingMock: Billing<SubscriptionType.Single>
+
+    @Mock
+    private lateinit var successfulConnector: BillingConnector
 
     private val billingClientMock = mock(BillingClient::class.java)
 
@@ -43,7 +46,18 @@ class BillingTest {
 
     @BeforeTest
     fun init() = runTest {
+
+//        val klass = Billing::class
+//        val method = klass.functions.find { it.name == "connect" }!!//?.isAccessible = true
+
+        val klass = Billing::class.java
+        klass.getDeclaredField("connector")
+            .apply { isAccessible = true }
+            .set(billingMock, successfulConnector)
+
         `when`(billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()).thenCallRealMethod()
+        `when`(successfulConnector.connect()).thenReturn(true)
+
     }
 
     @Test
@@ -70,4 +84,8 @@ class BillingTest {
 //
 //    }
 
+}
+
+class Foo {
+    private var v: String = ""
 }
