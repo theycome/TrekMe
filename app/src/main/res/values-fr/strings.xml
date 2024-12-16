@@ -21,8 +21,9 @@
     <string name="projected_y_short">N</string>
     <string name="projection_none">Aucune</string>
     <string name="calibration_projection_saved_ok">Projection changée</string>
-    <string name="ok_dialog">Ok</string>
+    <string name="ok_dialog">OK</string>
     <string name="no_dialog">Non</string>
+    <string name="yes_quit_dialog">Oui, QUITTER</string>
     <string name="open_dialog">Ouvrir</string>
     <string name="no_authorize_dialog">Ne pas autoriser</string>
     <string name="import_menu_title">Importer une carte</string>
@@ -56,6 +57,7 @@
     <string name="import_tracks_warning">Le fichier sélectionné a un format inconnu. Les extensions connues sont :</string>
     <string name="mapview_add_marker">Marqueur</string>
     <string name="mapview_add_beacon">Balise</string>
+    <string name="mapview_add_track">Trace</string>
     <string name="move_marker">Déplacer</string>
     <string name="marker_edit_screen_title">Modification du marqueur</string>
     <string name="beacon_edit_screen_title">Modification de la balise</string>
@@ -71,6 +73,11 @@
     <string name="change_color">Changer la couleur</string>
     <string name="projection_label">Coordonnées de projection</string>
     <string name="marker_changes_saved">Changements sauvegardés</string>
+    <string name="beacon_advertise">Ajoutez des balises pour vous alerter quand vous rentrez dans certaines zones de proximité (indiquées en
+        pointillés).
+        Le rayon d\'une balise est de 100m par défaut, et peut être modifié.
+        \nL\'alerte est sonore et utilise le vibreur.
+    </string>
     <string name="beacon_help">Une balise sert à vous alerter quand vous rentrez dans la zone de proximité (indiquée en
         pointillés).
         Le rayon d\'une balise est de 100m par défaut, mais il peut être modifié.
@@ -81,6 +88,19 @@
     <string name="elevation_stats_not_significant">Les statistiques d\'altitude ne sont pas significatives.</string>
     <!-- Map bottomsheet -->
     <string name="elevation_profile">Profil d\'altitude</string>
+    <string name="edit_track_path">Modifier</string>
+    <string name="delete_track_confirm">Confirmez-vous la suppression de la trace ?</string>
+
+    <!-- Track create screen -->
+    <string name="track_create_title">Track create</string>
+    <string name="track_create_start_title">Point de départ</string>
+    <string name="track_create_start_help">Appuyez sur la carte pour ajouter de nouveaux points</string>
+    <string name="track_create_name_dialog">Nom de la trace</string>
+    <string name="track_create_save_done">Trace enregistrée</string>
+    <string name="track_create_unsaved_changes_title">Quitter l\'édition ?</string>
+    <string name="track_create_unsaved_changes_content">Vos derniers changements ne seront pas enregistrés.</string>
+    <string name="track_create_unsaved_changes_keep_edit">Continuer l\'édition</string>
+    <string name="track_create_limit">En version gratuite, la limite est de %1$d points par trace.\nAvec TrekMe Extended, supprimez cette limite et profitez d\'autres avantages.</string>
 
     <string name="delete_marker_question">Supprimer le marker ?</string>
     <string name="mapview_show_speed">Afficher vitesse</string>
@@ -522,6 +542,7 @@
     <string name="no_download_limit">Pas de limite de téléchargement.</string>
     <string name="osm_level_17">Débloquez le niveau 17 pour les cartes OpenStreetMap.</string>
     <string name="create_map_from_track">Créez une carte à partir d\'une trace gpx.</string>
+    <string name="remove_track_size_limit">Supprimez la limite du nombre de points lors de la création de trace.</string>
     <string name="rate_the_app">Noter l\'application</string>
     <string name="user_feedback">Retours et suggestions</string>
     <string name="feedback_desc">Vous avez des idées d\'amélioration ou quelques soucis, n\'hésitez pas à m\'envoyer un mail.</string>
@@ -538,6 +559,7 @@
     <string name="track_rename">Renommer</string>
     <string name="track_choose_map">Ajouter à …</string>
     <string name="track_share">Partager</string>
+    <string name="track_share_error">Une erreur est survenue lors du partage de trace</string>
     <string name="track_elevation_profile">Voir le profil</string>
     <string name="manage_subscription_btn">GÉRER L\'ABONNEMENT</string>
 

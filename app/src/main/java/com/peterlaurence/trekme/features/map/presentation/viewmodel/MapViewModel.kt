@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.features.map.presentation.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.compose.runtime.State
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
@@ -25,6 +26,7 @@ import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.events.recording.GpxRecordEvents
 import com.peterlaurence.trekme.features.common.domain.interactors.MapComposeTileStreamProviderInteractor
 import com.peterlaurence.trekme.features.common.domain.interactors.MapExcursionInteractor
+import com.peterlaurence.trekme.features.common.domain.interactors.RemoveRouteInteractor
 import com.peterlaurence.trekme.features.map.domain.interactors.BeaconInteractor
 import com.peterlaurence.trekme.features.map.domain.interactors.ExcursionInteractor
 import com.peterlaurence.trekme.features.map.domain.interactors.LandmarkInteractor
@@ -42,6 +44,7 @@ import com.peterlaurence.trekme.features.map.presentation.events.MarkerEditEvent
 import com.peterlaurence.trekme.features.map.presentation.events.PlaceableEvent
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.BeaconLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.BottomSheetLayer
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.BottomSheetState
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.CalloutLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.DistanceLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.DistanceLineState
@@ -57,9 +60,9 @@ import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.Scale
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.TrackFollowLayer
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.ZoomIndicatorLayer
 import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
-import com.peterlaurence.trekme.util.map as mapStateFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -90,6 +93,7 @@ import ovh.plrapps.mapcompose.api.setScrollOffsetRatio
 import ovh.plrapps.mapcompose.ui.state.MapState
 import java.util.UUID
 import javax.inject.Inject
+import com.peterlaurence.trekme.util.map as mapStateFlow
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -101,7 +105,8 @@ class MapViewModel @Inject constructor(
     landmarkInteractor: LandmarkInteractor,
     beaconInteractor: BeaconInteractor,
     routeInteractor: RouteInteractor,
-    excursionInteractor: ExcursionInteractor,
+    removeRouteInteractor: RemoveRouteInteractor,
+    private val excursionInteractor: ExcursionInteractor,
     mapExcursionInteractor: MapExcursionInteractor,
     excursionRepository: ExcursionRepository,
     private val trackFollowRepository: TrackFollowRepository,
@@ -148,12 +153,12 @@ class MapViewModel @Inject constructor(
         mapInteractor,
         onOutOfBounds = {
             viewModelScope.launch {
-                _events.send(MapEvent.CURRENT_LOCATION_OUT_OF_BOUNDS)
+                _events.send(MapEvent.CurrentLocationOutOfBounds)
             }
         },
         onNoLocation = {
             viewModelScope.launch {
-                _events.send(MapEvent.AWAITING_LOCATION)
+                _events.send(MapEvent.AwaitingLocation)
             }
         }
     )
@@ -207,7 +212,7 @@ class MapViewModel @Inject constructor(
         appEventBus = appEventBus,
         onTrackSelected = {
             viewModelScope.launch {
-                _events.send(MapEvent.TRACK_TO_FOLLOW_SELECTED)
+                _events.send(MapEvent.TrackToFollowSelected)
             }
         }
     )
@@ -234,7 +239,8 @@ class MapViewModel @Inject constructor(
         excursionRepository = excursionRepository,
         mapInteractor = mapInteractor,
         mapExcursionInteractor = mapExcursionInteractor,
-        routeInteractor = routeInteractor
+        routeInteractor = routeInteractor,
+        removeRouteInteractor = removeRouteInteractor
     )
 
     val calloutLayer = CalloutLayer(
@@ -255,7 +261,7 @@ class MapViewModel @Inject constructor(
             val handled = trackFollowLayer.handleOnPathClick(route.id, mapState, map)
             if (!handled) {
                 viewModelScope.launch {
-                    _events.send(MapEvent.SHOW_TRACK_BOTTOM_SHEET)
+                    _events.send(MapEvent.ShowTrackBottomSheet)
                 }
                 bottomSheetLayer.setData(route, excursionData)
             }
@@ -324,7 +330,7 @@ class MapViewModel @Inject constructor(
 
     fun initiateTrackFollow() = viewModelScope.launch {
         if (trackFollowRepository.serviceState.value is TrackFollowServiceState.Started) {
-            _events.send(MapEvent.TRACK_TO_FOLLOW_ALREADY_RUNNING)
+            _events.send(MapEvent.TrackToFollowAlreadyRunning)
         } else {
             trackFollowLayer.start()
         }
@@ -343,11 +349,16 @@ class MapViewModel @Inject constructor(
     }
 
     fun alignToNorth() = viewModelScope.launch {
-        dataStateFlow.first().mapState.rotateTo(0f)
+        dataStateFlow.firstOrNull()?.mapState?.rotateTo(0f)
     }
 
     fun onElevationFixUpdate(fix: Int) = viewModelScope.launch {
-        elevationFixInteractor.setElevationFix(dataStateFlow.first().map, fix)
+        val map = dataStateFlow.firstOrNull()?.map ?: return@launch
+        elevationFixInteractor.setElevationFix(map, fix)
+    }
+
+    fun getCurrentDataState(): DataState? {
+        return dataStateFlow.replayCache.firstOrNull()
     }
 
     fun isShowingDistanceFlow(): StateFlow<Boolean> = distanceLayer.isVisible
@@ -356,6 +367,27 @@ class MapViewModel @Inject constructor(
     fun orientationVisibilityFlow(): Flow<Boolean> = settings.getOrientationVisibility()
     fun isLockedOnPosition(): State<Boolean> = locationOrientationLayer.isLockedOnPosition
     fun isShowingGpsDataFlow(): Flow<Boolean> = settings.getGpsDataVisibility()
+
+    private var shareLoadingJob: Job? = null
+    fun shareTracks(trackIds: List<String>) {
+        if (shareLoadingJob?.isActive == true) return
+        shareLoadingJob = viewModelScope.launch {
+            val bottomSheetState =
+                bottomSheetLayer.state.value as? BottomSheetState.BottomSheetData ?: return@launch
+            bottomSheetState.shareLoading.value = true
+            val uris = trackIds.mapNotNull { id ->
+                excursionInteractor.getUriForShare(id)
+            }
+            bottomSheetState.shareLoading.value = true
+
+            if (uris.isNotEmpty()) {
+                _events.send(MapEvent.ShareTracks(uris))
+            } else {
+                _events.send(MapEvent.ShareTrackFailure)
+            }
+            bottomSheetState.shareLoading.value = false
+        }
+    }
 
     /* region map configuration */
     private suspend fun onMapChange(map: Map) {
@@ -451,10 +483,12 @@ enum class Error : UiState {
     IgnLicenseError, WmtsLicenseError, EmptyMap
 }
 
-enum class MapEvent {
-    CURRENT_LOCATION_OUT_OF_BOUNDS,
-    AWAITING_LOCATION,
-    TRACK_TO_FOLLOW_SELECTED,
-    TRACK_TO_FOLLOW_ALREADY_RUNNING,
-    SHOW_TRACK_BOTTOM_SHEET
+sealed interface MapEvent {
+    data object CurrentLocationOutOfBounds : MapEvent
+    data object AwaitingLocation : MapEvent
+    data object TrackToFollowSelected : MapEvent
+    data object TrackToFollowAlreadyRunning : MapEvent
+    data object ShowTrackBottomSheet : MapEvent
+    data class ShareTracks(val uris: List<Uri>) : MapEvent
+    data object ShareTrackFailure : MapEvent
 }

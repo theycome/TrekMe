@@ -98,8 +98,9 @@
     <string name="with_onboarding_btn">With onboarding</string>
     <string name="without_onboarding_btn">Without onboarding</string>
     <string name="welcome_excursion_search">Search for excursions</string>
-    <string name="ok_dialog">Ok</string>
+    <string name="ok_dialog">OK</string>
     <string name="no_dialog">No</string>
+    <string name="yes_quit_dialog">Yes, QUIT</string>
     <string name="open_dialog">Open</string>
     <string name="no_authorize_dialog">Don\'t authorize</string>
     <string name="delete_dialog">Delete</string>
@@ -259,6 +260,7 @@
     <string name="mapview_add_marker">Marker</string>
     <string name="mapview_add_landmark">Landmark</string>
     <string name="mapview_add_beacon">Beacon</string>
+    <string name="mapview_add_track">Track</string>
     <string name="mapview_measure_distance">Measure distance</string>
     <string name="mapview_measure_distance_on_track">Distance on track</string>
     <string name="mapview_orientation_enable">Show orientation</string>
@@ -315,6 +317,10 @@
     <string name="comment_label">Comment</string>
     <string name="save_action">Save</string>
     <string name="marker_changes_saved">Changes saved</string>
+    <string name="beacon_advertise">Add a beacon to be notified you when you get close enough to it.
+        The vicinity area is indicated with a dashed line.
+        The beacon radius is 100m by default, but can be changed.\nThe alert is a sonar sound effect and a vibration.
+    </string>
     <string name="beacon_help">A beacon notifies you when you get close enough to it.
         The vicinity area is indicated with a dashed line.
         The beacon radius is 100m by default, but can be changed.\nThe alert is a sonar sound effect and a vibration.
@@ -324,6 +330,19 @@
     <string name="elevation_stats_not_significant">Elevation statistics are\'t significant.</string>
     <!-- Map bottomsheet -->
     <string name="elevation_profile">Elevation profile</string>
+    <string name="edit_track_path">Edit path</string>
+    <string name="delete_track_confirm">Are you sure you want to delete this track?</string>
+
+    <!-- Track create screen -->
+    <string name="track_create_title">Track create</string>
+    <string name="track_create_start_title">Starting point</string>
+    <string name="track_create_start_help">Press on the map to add new points</string>
+    <string name="track_create_name_dialog">Track name</string>
+    <string name="track_create_save_done">Track saved</string>
+    <string name="track_create_unsaved_changes_title">Quit track edit?</string>
+    <string name="track_create_unsaved_changes_content">Changes you made so far will not be saved.</string>
+    <string name="track_create_unsaved_changes_keep_edit">Keep Editing</string>
+    <string name="track_create_limit">You\'re limited to %1$d points per track with the free version.\nWith TrekMe Extended, remove this limit and enjoy other premium features.</string>
 
     <!-- Record list -->
     <string name="fragment_recording" translatable="false">FragmentRecording</string>
@@ -387,6 +406,7 @@
     <string name="track_rename">Rename</string>
     <string name="track_choose_map">Add to map</string>
     <string name="track_share">Share</string>
+    <string name="track_share_error">An error occurred while sharing a track</string>
     <string name="track_elevation_profile">Show elevation</string>
 
     <!-- Elevation fragment -->
@@ -672,6 +692,7 @@
     <string name="add_beacons">Add beacons to alert you when you get close to specific locations.</string>
     <string name="no_ads">No ads</string>
     <string name="create_map_from_track">Create a map from a gpx track.</string>
+    <string name="remove_track_size_limit">Remove the points number limit while creating a track.</string>
     <string name="center_on_track">Quick center on a track from tracks management screen.</string>
     <string name="define_elevation_fix">Set an elevation fix in the GPS statistics panel.</string>
     <string name="no_download_limit">No download limit.</string>

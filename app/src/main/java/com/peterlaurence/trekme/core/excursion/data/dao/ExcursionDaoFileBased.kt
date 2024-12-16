@@ -22,6 +22,7 @@ import com.peterlaurence.trekme.core.lib.geojson.GeoJsonWriter
 import com.peterlaurence.trekme.core.lib.gpx.parseGpxSafely
 import com.peterlaurence.trekme.core.lib.gpx.writeGpx
 import com.peterlaurence.trekme.util.FileUtils
+import com.peterlaurence.trekme.util.fileNameAsCurrentDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -322,7 +323,8 @@ class ExcursionDaoFileBased(
                         title = geoRecord.name,
                         description = "",
                         type = Type.Hike,
-                        photos = emptyList()
+                        photos = emptyList(),
+                        isPathEditable = false  // for instance, don't allow editing tracks imported from gpx files
                     )
                     val str = json.encodeToString(config)
                     FileUtils.writeToFile(str, configFile)
@@ -346,7 +348,8 @@ class ExcursionDaoFileBased(
         title: String,
         type: ExcursionType,
         description: String,
-        geoRecord: GeoRecord
+        geoRecord: GeoRecord,
+        isPathEditable: Boolean
     ): Boolean {
         return runCatching {
             val root = appDirFlow.firstOrNull() ?: return false
@@ -359,8 +362,14 @@ class ExcursionDaoFileBased(
                 it.createNewFile()
             }
 
-            val config =
-                ExcursionConfig(id, title, description, type.toData(), photos = emptyList())
+            val config = ExcursionConfig(
+                id = id,
+                title = title,
+                description = description,
+                type = type.toData(),
+                photos = emptyList(),
+                isPathEditable = isPathEditable
+            )
             val str = json.encodeToString(config)
             FileUtils.writeToFile(str, configFile)
 
@@ -470,7 +479,8 @@ class ExcursionDaoFileBased(
                     title = gpxFile.nameWithoutExtension,
                     description = "",
                     type = Type.Hike,
-                    photos = emptyList()
+                    photos = emptyList(),
+                    isPathEditable = false  // for instance, don't allow editing tracks imported from gpx files
                 )
                 val str = json.encodeToString(config)
                 FileUtils.writeToFile(str, configFile)
@@ -497,9 +507,8 @@ class ExcursionDaoFileBased(
     }.getOrNull()
 
     private fun newExcursionFolder(parent: File): File {
-        val date = Date()
-        val dateFormat = SimpleDateFormat("dd-MM-yyyy_HH-mm-ss", Locale.ENGLISH)
-        val folderName = "excursion-" + dateFormat.format(date)
+        val date = fileNameAsCurrentDate()
+        val folderName = "excursion-$date"
 
         val destFolder = File(parent, folderName)
         if (!destFolder.exists()) {

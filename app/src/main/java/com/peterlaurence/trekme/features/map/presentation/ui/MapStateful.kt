@@ -16,21 +16,15 @@ import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -61,8 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.peterlaurence.trekme.R
-import com.peterlaurence.trekme.core.georecord.domain.model.GeoStatistics
-import com.peterlaurence.trekme.core.location.domain.model.Location
 import com.peterlaurence.trekme.core.settings.RotationMode
 import com.peterlaurence.trekme.features.common.presentation.ui.bottomsheet.States
 import com.peterlaurence.trekme.features.common.presentation.ui.screens.LoadingScreen
@@ -75,13 +66,12 @@ import com.peterlaurence.trekme.features.map.presentation.events.ExcursionWaypoi
 import com.peterlaurence.trekme.features.map.presentation.events.ItineraryEvent
 import com.peterlaurence.trekme.features.map.presentation.events.MarkerEditEvent
 import com.peterlaurence.trekme.features.map.presentation.ui.bottomsheet.BottomSheet
-import com.peterlaurence.trekme.features.map.presentation.ui.components.CompassComponent
-import com.peterlaurence.trekme.features.map.presentation.ui.components.MapTopAppBar
 import com.peterlaurence.trekme.features.map.presentation.ui.components.RecordingButtons
-import com.peterlaurence.trekme.features.map.presentation.ui.components.StatsPanel
 import com.peterlaurence.trekme.features.map.presentation.ui.components.statsPanelHeight
+import com.peterlaurence.trekme.features.map.presentation.ui.navigation.TrackCreateScreenArgs
 import com.peterlaurence.trekme.features.map.presentation.ui.screens.ErrorScaffold
 import com.peterlaurence.trekme.features.map.presentation.ui.screens.MapScreen
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.DataState
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.Error
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.GpxRecordServiceViewModel
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.Loading
@@ -90,14 +80,17 @@ import com.peterlaurence.trekme.features.map.presentation.viewmodel.MapUiState
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.MapViewModel
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.StatisticsViewModel
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.TrackFollowLayer
+import com.peterlaurence.trekme.features.map.presentation.viewmodel.layers.TrackType
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.BatteryOptimSolutionDialog
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.BatteryOptimWarningDialog
 import com.peterlaurence.trekme.util.android.getActivityOrNull
+import com.peterlaurence.trekme.util.android.sendShareIntent
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import ovh.plrapps.mapcompose.api.rotation
+import ovh.plrapps.mapcompose.api.centroidX
+import ovh.plrapps.mapcompose.api.centroidY
+import ovh.plrapps.mapcompose.api.scale
 import java.util.UUID
 
 @Composable
@@ -111,6 +104,7 @@ fun MapStateful(
     onNavigateToExcursionWaypointEdit: (waypointId: String, excursionId: String) -> Unit,
     onNavigateToBeaconEdit: (beaconId: String, mapId: UUID) -> Unit,
     onNavigateToShop: () -> Unit,
+    onNavigateToTrackCreate: (TrackCreateScreenArgs) -> Unit,
     onMainMenuClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -219,27 +213,36 @@ fun MapStateful(
             snackbarHostState.currentSnackbarData?.dismiss()
         }
         when (event) {
-            MapEvent.CURRENT_LOCATION_OUT_OF_BOUNDS -> showSnackbar(
+            MapEvent.CurrentLocationOutOfBounds -> showSnackbar(
                 scope = scope,
                 snackbarHostState = snackbarHostState,
                 msg = outOfBounds,
                 okString = ok
             )
 
-            MapEvent.AWAITING_LOCATION -> {
+            MapEvent.AwaitingLocation -> {
                 val awaitingLocation = context.getString(R.string.awaiting_location)
                 showSnackbar(scope, snackbarHostState, awaitingLocation, ok)
             }
 
-            MapEvent.TRACK_TO_FOLLOW_SELECTED -> dismissSnackbar()
-            MapEvent.TRACK_TO_FOLLOW_ALREADY_RUNNING -> {
+            MapEvent.TrackToFollowSelected -> dismissSnackbar()
+            MapEvent.TrackToFollowAlreadyRunning -> {
                 showTrackFollowDialog = true
             }
 
-            MapEvent.SHOW_TRACK_BOTTOM_SHEET -> {
+            MapEvent.ShowTrackBottomSheet -> {
                 scope.launch {
                     anchoredDraggableState.animateTo(States.PEAKED)
                 }
+            }
+
+            is MapEvent.ShareTracks -> {
+                sendShareIntent(context, event.uris)
+            }
+
+            MapEvent.ShareTrackFailure -> {
+                val msg = context.getString(R.string.track_share_error)
+                showSnackbar(scope, snackbarHostState, msg, ok)
             }
         }
     }
@@ -310,7 +313,7 @@ fun MapStateful(
                 /* Always use the light theme background (dark theme or not). Done this way, it
                  * doesn't add a GPU overdraw. */
                 TrekMeTheme(darkThemeBackground = md_theme_light_background) {
-                    MapScaffold(
+                    MapScreen(
                         mapUiState,
                         name,
                         snackbarHostState,
@@ -348,6 +351,13 @@ fun MapStateful(
                         onCompassClick = viewModel::alignToNorth,
                         onElevationFixUpdate = viewModel::onElevationFixUpdate,
                         onNavigateToShop = onNavigateToShop,
+                        onNavigateToTrackCreate = {
+                            viewModel.getCurrentDataState()?.also { dataState ->
+                                onNavigateToTrackCreate(
+                                    makeTrackCreationArgs(dataState, excursionId = null)
+                                )
+                            }
+                        },
                         recordingButtons = {
                             RecordingFabStateful(gpxRecordServiceViewModel)
                         }
@@ -367,7 +377,30 @@ fun MapStateful(
                             viewModel.calloutLayer.setCursor(latLon, distance = d, ele = ele)
                         },
                         onColorChange = viewModel.bottomSheetLayer::onColorChange,
-                        onTitleChange = viewModel.bottomSheetLayer::onTitleChange
+                        onTitleChange = viewModel.bottomSheetLayer::onTitleChange,
+                        onEditPath = {
+                            viewModel.getCurrentDataState()?.also { dataState ->
+                                onNavigateToTrackCreate(
+                                    makeTrackCreationArgs(dataState, excursionId = it.id)
+                                )
+                            }
+                        },
+                        onSharePath = {
+                            viewModel.shareTracks(listOf(it.id))
+                        },
+                        onDelete = { trackType ->
+                            when (trackType) {
+                                is TrackType.ExcursionType -> {
+                                    viewModel.bottomSheetLayer.onRemoveExcursion(trackType.excursionRef)
+                                }
+                                is TrackType.RouteType -> {
+                                    viewModel.bottomSheetLayer.onRemoveRoute(trackType.route)
+                                }
+                            }
+                            scope.launch {
+                                anchoredDraggableState.animateTo(States.COLLAPSED)
+                            }
+                        }
                     )
                 }
             }
@@ -451,133 +484,6 @@ fun MapStateful(
     }
 }
 
-@Composable
-private fun MapScaffold(
-    uiState: MapUiState,
-    name: String,
-    snackbarHostState: SnackbarHostState,
-    isShowingOrientation: Boolean,
-    isShowingDistance: Boolean,
-    isShowingDistanceOnTrack: Boolean,
-    isShowingSpeed: Boolean,
-    isLockedOnPosition: Boolean,
-    isShowingGpsData: Boolean,
-    isShowingScaleIndicator: Boolean,
-    isShowingZoomIndicator: Boolean,
-    rotationMode: RotationMode,
-    locationFlow: Flow<Location>,
-    elevationFix: Int,
-    geoStatistics: GeoStatistics?,
-    hasElevationFix: Boolean,
-    hasBeacons: Boolean,
-    hasTrackFollow: Boolean,
-    hasMarkerManage: Boolean,
-    bottomSheetOffset: Float,
-    onMainMenuClick: () -> Unit,
-    onManageTracks: () -> Unit,
-    onManageMarkers: () -> Unit,
-    onToggleShowOrientation: () -> Unit,
-    onAddMarker: () -> Unit,
-    onAddLandmark: () -> Unit,
-    onAddBeacon: () -> Unit,
-    onShowDistance: () -> Unit,
-    onToggleDistanceOnTrack: () -> Unit,
-    onToggleSpeed: () -> Unit,
-    onToggleLockOnPosition: () -> Unit,
-    onToggleShowGpsData: () -> Unit,
-    onFollowTrack: () -> Unit,
-    onPositionFabClick: () -> Unit,
-    onCompassClick: () -> Unit,
-    onElevationFixUpdate: (Int) -> Unit,
-    onNavigateToShop: () -> Unit,
-    recordingButtons: @Composable () -> Unit
-) {
-    Scaffold(
-        snackbarHost = {
-            SnackbarHost(
-                modifier = Modifier.graphicsLayer {
-                    translationY = -bottomSheetOffset
-                },
-                hostState = snackbarHostState
-            )
-        },
-        topBar = {
-            MapTopAppBar(
-                title = name,
-                isShowingOrientation = isShowingOrientation,
-                isShowingDistance = isShowingDistance,
-                isShowingDistanceOnTrack = isShowingDistanceOnTrack,
-                isShowingSpeed = isShowingSpeed,
-                isLockedOnPosition = isLockedOnPosition,
-                isShowingGpsData = isShowingGpsData,
-                hasBeacons = hasBeacons,
-                hasTrackFollow = hasTrackFollow,
-                hasMarkerManage = hasMarkerManage,
-                onMenuClick = onMainMenuClick,
-                onManageTracks = onManageTracks,
-                onManageMarkers = onManageMarkers,
-                onToggleShowOrientation = onToggleShowOrientation,
-                onAddMarker = onAddMarker,
-                onAddLandmark = onAddLandmark,
-                onAddBeacon = onAddBeacon,
-                onShowDistance = onShowDistance,
-                onToggleDistanceOnTrack = onToggleDistanceOnTrack,
-                onToggleSpeed = onToggleSpeed,
-                onToggleLockPosition = onToggleLockOnPosition,
-                onToggleShowGpsData = onToggleShowGpsData,
-                onFollowTrack = onFollowTrack,
-                onNavigateToShop = onNavigateToShop
-            )
-        },
-        floatingActionButton = {
-            Column(
-                Modifier
-                    .graphicsLayer {
-                        translationY = -bottomSheetOffset
-                    }
-            ) {
-                if (rotationMode != RotationMode.NONE) {
-                    CompassComponent(
-                        degrees = uiState.mapState.rotation,
-                        onClick = if (rotationMode == RotationMode.FREE) onCompassClick else null
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                FloatingActionButton(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    onClick = onPositionFabClick,
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_gps_fixed_24dp),
-                        contentDescription = stringResource(id = R.string.center_on_position_btn_desc),
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimaryContainer)
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            MapScreen(
-                modifier = Modifier.weight(1f, true),
-                mapUiState = uiState,
-                isShowingDistance = isShowingDistance,
-                isShowingSpeed = isShowingSpeed,
-                isShowingGpsData = isShowingGpsData,
-                isShowingScaleIndicator = isShowingScaleIndicator,
-                isShowingZoomIndicator = isShowingZoomIndicator,
-                locationFlow = locationFlow,
-                elevationFix = elevationFix,
-                hasElevationFix = hasElevationFix,
-                onElevationFixUpdate = onElevationFixUpdate,
-                recordingButtons = recordingButtons
-            )
-            if (geoStatistics != null) {
-                StatsPanel(stats = geoStatistics)
-            }
-        }
-    }
-}
 
 @Composable
 private fun RecordingFabStateful(viewModel: GpxRecordServiceViewModel) {
@@ -660,6 +566,16 @@ fun showSnackbar(
     snackbarHostState.currentSnackbarData?.dismiss()
 
     snackbarHostState.showSnackbar(msg, actionLabel = okString)
+}
+
+private fun makeTrackCreationArgs(dataState: DataState, excursionId: String?): TrackCreateScreenArgs {
+    return TrackCreateScreenArgs(
+        mapId = dataState.map.id.toString(),
+        centroidX = dataState.mapState.centroidX,
+        centroidY = dataState.mapState.centroidY,
+        scale = dataState.mapState.scale,
+        excursionId = excursionId
+    )
 }
 
 private const val expandedRatio = 0.5f
