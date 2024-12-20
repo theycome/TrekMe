@@ -7,6 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
+import arrow.core.raise.Raise
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
@@ -16,7 +17,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -124,18 +125,30 @@ fun <T> launchFlowCollectionWithLifecycle(
  * and then get a result from it, send it to Flow (wrapped into our model class)
  * and then wait on a Flow to deliver the result using `first()` to return it at last to our upstream
  *
- * @throws IllegalStateException if lambda passed into parameter `block`,
- * and eventually the invocation of `trySend`, was not performed exactly once by the client
+ * If lambda passed into parameter `block`, and eventually the invocation of `trySend`,
+ * was not performed exactly once by the client,
+ * raises [CallbackFlowFailure]
  */
+context(Raise<CallbackFlowFailure>)
 suspend fun <R> callbackFlowWrapper(block: ((R) -> Unit) -> Unit): R {
     var sendCallCount = 0
     val result = callbackFlow {
-        block {
-            trySend(it)
-            sendCallCount++
+        runCatching {
+            block {
+                trySend(it)
+                sendCallCount++
+            }
+        }.onFailure {
+            raise(CallbackFlowFailure.Exception(it))
         }
         awaitClose { /* We can't do anything, but it doesn't matter */ }
-    }.first()
-    check(1 == sendCallCount) { "trySend() was called $sendCallCount times instead of only once" }
+    }.firstOrNull() ?: raise(CallbackFlowFailure.NoElements)
+    if (sendCallCount != 1) raise(CallbackFlowFailure.MultipleElementsEmitted(sendCallCount))
     return result
+}
+
+sealed class CallbackFlowFailure {
+    data object NoElements : CallbackFlowFailure()
+    data class MultipleElementsEmitted(val times: Int) : CallbackFlowFailure()
+    data class Exception(val throwable: Throwable) : CallbackFlowFailure()
 }

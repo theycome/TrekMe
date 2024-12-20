@@ -12,6 +12,7 @@ import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsMonthYear
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsSingle
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
+import com.peterlaurence.trekme.recoverAssertHappyPath
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
@@ -162,7 +163,9 @@ class BillingQueryTest {
 
                     // invoke BillingQuery.queryPurchase()
                     // assert whether the correct Purchase is returned
-                    query.queryPurchasesResult(purchaseType).purchases shouldContain purchase
+                    recoverAssertHappyPath {
+                        query.queryPurchasesResult(purchaseType).purchases shouldContain purchase
+                    }
 
                     // verify that a correct product type is passed to billingClient.queryPurchasesAsync(params)
                     queryPurchasesParamsCaptor.value.zza() shouldBe purchaseTypeToApiStringMap[purchaseType]
@@ -185,7 +188,9 @@ class BillingQueryTest {
         }.`when`(billingClientMock)
             .queryProductDetailsAsync(any(), any())
 
-        query.queryProductDetailsResult("any").productDetails shouldContain productDetailsSingleSubMock
+        recoverAssertHappyPath {
+            query.queryProductDetailsResult("any").productDetails shouldContain productDetailsSingleSubMock
+        }
     }
 
 }

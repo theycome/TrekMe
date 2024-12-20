@@ -1,10 +1,11 @@
 package com.peterlaurence.trekme.core.billing.data.model
 
+import arrow.core.raise.Raise
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
-import com.peterlaurence.trekme.core.billing.data.api.AcknowledgePurchaseFunctor
+import com.peterlaurence.trekme.util.CallbackFlowFailure
 import com.peterlaurence.trekme.util.callbackFlowWrapper
 
 /**
@@ -26,6 +27,7 @@ fun Purchase.acknowledge(
     }
 }
 
+context(Raise<CallbackFlowFailure>)
 suspend fun Purchase.assureAcknowledgement(acknowledgeFunctor: AcknowledgePurchaseFunctor): Boolean =
     if (purchasedButNotAcknowledged) {
         callbackFlowWrapper { emit ->
@@ -69,3 +71,5 @@ enum class PurchaseType(
     })
 
 }
+
+typealias AcknowledgePurchaseFunctor = (Purchase, (BillingResult) -> Unit) -> Unit

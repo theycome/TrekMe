@@ -1,7 +1,10 @@
 package com.peterlaurence.trekme.util
 
-import io.kotest.assertions.throwables.shouldThrow
+import arrow.core.raise.recover
+import com.peterlaurence.trekme.recoverAssertHappyPath
+import com.peterlaurence.trekme.shouldNotHappen
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeTypeOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 
@@ -14,21 +17,41 @@ class CallbackFlowWrapperTest {
     fun `vanilla usage`(): Unit = runTest {
 
         val v = 101
-        val res = callbackFlowWrapper { emit ->
-            emit { v }
-        }()
+        val res = recoverAssertHappyPath {
+            callbackFlowWrapper { emit ->
+                emit { v }
+            }()
+        }
 
         res shouldBe v
+
     }
 
     @Test
     fun `multiple emit calls`(): Unit = runTest {
 
-        shouldThrow<IllegalStateException> {
+        recover({
             callbackFlowWrapper { emit ->
                 emit { 0 }
                 emit { 0 }
             }()
+            shouldNotHappen()
+        }) {
+            it shouldBe CallbackFlowFailure.MultipleElementsEmitted(2)
+        }
+
+    }
+
+    @Test
+    fun `exception inside emit block`(): Unit = runTest {
+
+        recover({
+            callbackFlowWrapper { emit ->
+                emit { 0 }
+                error("some exception")
+            }()
+        }) {
+            it.shouldBeTypeOf<CallbackFlowFailure.Exception>()
         }
 
     }

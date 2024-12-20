@@ -1,5 +1,6 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
+import arrow.core.raise.Raise
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
@@ -12,6 +13,7 @@ import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.PurchasesResult
 import com.peterlaurence.trekme.core.billing.data.model.getPurchase
+import com.peterlaurence.trekme.util.CallbackFlowFailure
 import com.peterlaurence.trekme.util.callbackFlowWrapper
 import com.peterlaurence.trekme.util.log
 
@@ -23,10 +25,12 @@ class BillingQuery(
     private val purchaseIds: PurchaseIdsContract,
 ) {
 
+    context(Raise<CallbackFlowFailure>)
     suspend fun queryPurchase(type: PurchaseType): Purchase? =
         queryPurchasesResult(type)
             .getPurchase(type, purchaseIds)
 
+    context(Raise<CallbackFlowFailure>)
     suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
 
         val params = QueryPurchasesParams.newBuilder()
@@ -42,6 +46,7 @@ class BillingQuery(
         }()
     }
 
+    context(Raise<CallbackFlowFailure>)
     suspend fun queryProductDetailsResult(subId: String): ProductDetailsResult {
 
         val product = QueryProductDetailsParams.Product.newBuilder()
@@ -84,5 +89,3 @@ class BillingQuery(
     }
 
 }
-
-typealias AcknowledgePurchaseFunctor = (Purchase, (BillingResult) -> Unit) -> Unit

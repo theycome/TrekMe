@@ -1,11 +1,9 @@
 package com.peterlaurence.trekme.util
 
 import android.util.Log
-import arrow.core.identity
 import arrow.core.raise.Raise
 import arrow.core.raise.RaiseDSL
-import arrow.core.raise.fold
-import kotlin.experimental.ExperimentalTypeInference
+import arrow.core.raise.recover
 
 /**
  * Created by Ivan Yakushev on 17.11.2024
@@ -18,8 +16,14 @@ fun Any.logCallStack(objekt: Any) {
     Throwable("printStackTrace()").printStackTrace()
 }
 
-@OptIn(ExperimentalTypeInference::class)
+/**
+ * Calls recover
+ * - on failure - logs call stack and returns null
+ */
 @RaiseDSL
-inline fun <Error : Any> Any.recoverPrintStack(
-    @BuilderInference block: Raise<Error>.() -> Unit,
-) = fold(block, { throw it }, { logCallStack(it) }, ::identity)
+inline fun <Error : Any, A> Any.recoverLogged(
+    block: Raise<Error>.() -> A,
+): A? = recover(block) {
+    logCallStack(it)
+    null
+}

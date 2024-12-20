@@ -2,6 +2,7 @@ package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
 import arrow.core.raise.Raise
+import arrow.core.raise.recover
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
@@ -10,6 +11,7 @@ import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
+import com.peterlaurence.trekme.core.billing.data.model.AcknowledgePurchaseFunctor
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsResolver
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
@@ -29,6 +31,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.toSubscriptionDetails
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.Millis
 import com.peterlaurence.trekme.util.datetime.millis
+import com.peterlaurence.trekme.util.recoverLogged
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -46,8 +49,6 @@ class Billing<in T : SubscriptionType>(
     private val purchaseVerifier: PurchaseVerifier,
     private val appEventBus: AppEventBus,
 ) : BillingApi<T> {
-
-    // TODO? - extract private members into BillingData class to enable mock-testing Billing
 
     override val purchaseAcknowledgedEvent =
         MutableSharedFlow<Unit>(0, 1, BufferOverflow.DROP_OLDEST)
@@ -95,13 +96,15 @@ class Billing<in T : SubscriptionType>(
     override suspend fun queryAndAcknowledgePurchases(): Boolean {
         if (!connect()) return false
 
-        val oneTimeAcknowledged =
+        val oneTimeAcknowledged = recoverLogged {
             query.queryPurchase(PurchaseType.ONE_TIME)
-                ?.assureAcknowledgement(acknowledgePurchaseFunctor) ?: false
+                ?.assureAcknowledgement(acknowledgePurchaseFunctor)
+        } ?: false
 
-        val subAcknowledged =
+        val subAcknowledged = recoverLogged {
             query.queryPurchase(PurchaseType.SUB)
-                ?.assureAcknowledgement(acknowledgePurchaseFunctor) ?: false
+                ?.assureAcknowledgement(acknowledgePurchaseFunctor)
+        } ?: false
 
         return oneTimeAcknowledged || subAcknowledged
     }
@@ -116,10 +119,15 @@ class Billing<in T : SubscriptionType>(
     override suspend fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase(): Boolean {
         if (!connect()) return false
 
-        val oneTime = query.queryPurchase(PurchaseType.VALID_ONE_TIME)
+        val oneTime = recoverLogged {
+            query.queryPurchase(PurchaseType.VALID_ONE_TIME)
+        }
+
         return when (oneTime) {
             null -> {
-                query.queryPurchase(PurchaseType.VALID_SUB) != null
+                recoverLogged {
+                    query.queryPurchase(PurchaseType.VALID_SUB)
+                } != null
             }
 
             else -> {
@@ -148,7 +156,11 @@ class Billing<in T : SubscriptionType>(
         }
 
         val subId = purchaseIdsResolver(subscriptionType)
-        val result = query.queryProductDetailsResult(subId)
+        val result = recover({
+            query.queryProductDetailsResult(subId)
+        }) {
+            raise(GetSubscriptionDetailsFailure.InCallbackFlow(it))
+        }
 
         return when (result.billingResult.responseCode) {
             OK -> {
