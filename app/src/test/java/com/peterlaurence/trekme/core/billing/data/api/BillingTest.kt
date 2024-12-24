@@ -5,14 +5,17 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.Purchase
 import com.peterlaurence.trekme.core.billing.data.api.components.AnnualWithGracePeriodVerifier
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsSingle
+import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
+import com.peterlaurence.trekme.injectMock
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
-import org.mockito.Mock
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -25,49 +28,39 @@ class BillingTest {
     @get:Rule
     val rule: MockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS)
 
-    @Mock
-    private lateinit var billingMock: Billing<SubscriptionType.Single>
-
-    @Mock
-    private lateinit var successfulConnector: BillingConnector
-
-    private val billingClientMock = mock(BillingClient::class.java)
-
-    private val purchaseIdsSingleMock = mock(PurchaseIdsSingle::class.java)
-
-    private val purchaseVerifierMock = mock(AnnualWithGracePeriodVerifier::class.java)
-
-    private val billingQuery = BillingQuery(billingClientMock, purchaseIdsSingleMock)
-
-    @Mock
-    private lateinit var oneTimePurchaseMock: Purchase
-
-    private val applicationMock = mock(Application::class.java)
+    private val billingMock: Billing<SubscriptionType.Single> = mock()
+    private val purchaseValidOneTimeMock: Purchase = mock()
+    private val purchaseValidSubMock: Purchase = mock()
+    private val billingQueryMock: BillingQuery = mock()
+    private val billingClientMock: BillingClient = mock()
+    private val purchaseIdsSingleMock: PurchaseIdsSingle = mock()
+    private val purchaseVerifierMock: AnnualWithGracePeriodVerifier = mock()
+    private val oneTimePurchaseMock: Purchase = mock()
+    private val applicationMock: Application = mock()
 
     @BeforeTest
     fun init() = runTest {
 
-//        val klass = Billing::class
-//        val method = klass.functions.find { it.name == "connect" }!!//?.isAccessible = true
+        whenever(billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()).thenCallRealMethod()
 
-        val klass = Billing::class.java
-        klass.getDeclaredField("connector")
-            .apply { isAccessible = true }
-            .set(billingMock, successfulConnector)
+        billingMock.injectMock<BillingConnector, _>("connector") {
+            whenever(connect()).thenReturn(true)
+        }
 
-        `when`(billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()).thenCallRealMethod()
-        `when`(successfulConnector.connect()).thenReturn(true)
+        billingMock.injectMock<BillingQuery, _>("query") {
+            whenever(
+                this::queryPurchase.invoke(
+                    anyOrNull(),
+                    argThat {
+                        this == PurchaseType.VALID_ONE_TIME
+                    })
+            ).thenReturn(purchaseValidOneTimeMock)
+        }
 
     }
 
     @Test
-    fun foo() = runTest {
-
-        //val r = PowerMockito.mock(Billing::class.java)
-
-        // TODO need a power mock to stub connect
-        //`when`(billingMock.connect)
-
+    fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase() = runTest {
         billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()
     }
 
@@ -84,8 +77,4 @@ class BillingTest {
 //
 //    }
 
-}
-
-class Foo {
-    private var v: String = ""
 }
