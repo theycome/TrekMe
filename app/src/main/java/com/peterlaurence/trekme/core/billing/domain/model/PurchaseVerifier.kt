@@ -3,7 +3,7 @@ package com.peterlaurence.trekme.core.billing.domain.model
 import com.peterlaurence.trekme.util.datetime.Millis
 
 interface PurchaseVerifier {
-    fun checkTime(purchaseTime: Millis, now: Millis): AccessState
+    fun checkTime(purchaseTime: Millis, now: Millis = Millis.nowUTC()): AccessState
 }
 
 sealed class AccessState

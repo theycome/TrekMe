@@ -29,7 +29,6 @@ import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.toSubscriptionDetails
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.util.datetime.Millis
 import com.peterlaurence.trekme.util.datetime.millis
 import com.peterlaurence.trekme.util.recoverLogged
 import kotlinx.coroutines.channels.BufferOverflow
@@ -131,7 +130,7 @@ class Billing<in T : SubscriptionType>(
     }
 
     private fun consumeIfNotGrantedAccess(purchase: Purchase) {
-        val state = purchaseVerifier.checkTime(purchase.purchaseTime.millis, Millis.nowUTC())
+        val state = purchaseVerifier.checkTime(purchase.purchaseTime.millis)
         when (state) {
             is AccessGranted -> {}
             else -> query.consume(purchase)
