@@ -109,11 +109,6 @@ class Billing<in T : SubscriptionType>(
         return oneTimeAcknowledged || subAcknowledged
     }
 
-    // TODO - mock-test
-    // path VALID_ONE_TIME not null
-    // - check purchaseVerifier.checkTime gets now time close enough to UTC one
-    // -- when returned AccessGranted - no query.consume call
-    // --      else - query.consume call
     override suspend fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase(): Boolean {
         if (!connect()) return false
 

@@ -1,22 +1,21 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
-import android.app.Application
-import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.Purchase
 import com.peterlaurence.trekme.core.billing.data.api.components.AnnualWithGracePeriodVerifier
-import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsSingle
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.injectMock
+import com.peterlaurence.trekme.setPrivateProperty
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
-import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
@@ -32,24 +31,34 @@ class BillingTest {
     val rule: MockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS)
 
     private val billingMock: Billing<SubscriptionType.Single> = mock()
-    private val purchaseValidOneTimeMock: Purchase = mock()
-    private val purchaseValidSubMock: Purchase = mock()
-    private val billingClientMock: BillingClient = mock()
-    private val purchaseIdsSingleMock: PurchaseIdsSingle = mock()
-    private val purchaseVerifierMock: AnnualWithGracePeriodVerifier = mock()
-    private val oneTimePurchaseMock: Purchase = mock()
-    private val applicationMock: Application = mock()
+
+    private val purchaseValidOneTimeMock: Purchase = mock<Purchase>().apply {
+        whenever(purchaseTime).thenReturn(0)
+    }
+
+    private val purchaseVerifier = AnnualWithGracePeriodVerifier()
 
     @BeforeTest
     fun init() = runTest {
 
-        whenever(billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()).thenCallRealMethod()
+        billingMock.apply {
+            whenever(queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()).thenCallRealMethod()
 
-        billingMock.injectMock<BillingConnector, _>("connector") {
-            whenever(connect()).thenReturn(true)
+            injectMock<BillingConnector, _>("connector") {
+                whenever(connect()).thenReturn(true)
+            }
+
+            setPrivateProperty("purchaseVerifier", purchaseVerifier)
         }
+
     }
 
+    /**
+     * path VALID_ONE_TIME not null
+     * - check that purchaseVerifier.checkTime gets now time close enough to UTC one
+     * -- when returned AccessGranted - no query.consume() call
+     *  --      else - query.consume() call
+     */
     @Test
     fun `queryWhetherWeHavePurchasesAndConsumeOneTimePurchase path VALID_ONE_TIME not null`() =
         runTest {
@@ -64,7 +73,14 @@ class BillingTest {
                 ).thenReturn(purchaseValidOneTimeMock)
             }
 
+            val purchaseVerifierSpy = spy(purchaseVerifier)
+
             billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase() // invoke tested method
+
+            // Can not mock or argument-match value classes currently
+            // https://github.com/mockk/mockk/issues/948
+            //verify(purchaseVerifierSpy, times(1)).checkTime(anyOrNull(), anyOrNull())
+
         }
 
     @Test
@@ -103,20 +119,8 @@ class BillingTest {
                         this == PurchaseType.VALID_SUB
                     }
                 )
+
             }
         }
-
-//    @Test
-//    fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase() = runTest {
-//
-//        `when`(billingQuery.queryPurchase(PurchaseType.VALID_ONE_TIME)).thenReturn(
-//            oneTimePurchaseMock
-//        )
-//
-//        //verify(billingMock, times(1)).consumeIfNotGrantedAccess()
-//
-//        billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()
-//
-//    }
 
 }
