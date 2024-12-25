@@ -15,13 +15,13 @@ fun shouldNotHappen() {
 
 /**
  * A helper function to set up a mock and reflection-assign it to the target field
+ * @return created mock instance
  */
-inline fun <reified M, reified T> T.injectMock(intoField: String, mockInitBlock: M.() -> Unit) {
-    with(mock<M>()) {
+inline fun <reified M, reified T> T.injectMock(intoField: String, mockInitBlock: M.() -> Unit): M =
+    mock<M>().apply {
         mockInitBlock()
         this@injectMock.setPrivateProperty(intoField, this)
     }
-}
 
 /**
  * Use reflection to assign a private property
