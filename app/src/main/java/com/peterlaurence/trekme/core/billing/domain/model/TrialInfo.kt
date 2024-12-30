@@ -18,8 +18,8 @@ data class TrialAvailable(val duration: Days) : TrialInfo {
         operator fun invoke(period: String): TrialAvailable? {
 
             if (period.isEmpty()) return TrialAvailable(0.days_)
-            val lowercased = period.lowercase()
 
+            val lowercased = period.lowercase()
             val days = runCatching {
                 if (lowercased.first() != 'p') return@runCatching null
 
@@ -34,9 +34,9 @@ data class TrialAvailable(val duration: Days) : TrialInfo {
 
             }.getOrNull()
 
-            return if (days != null) {
-                TrialAvailable(days)
-            } else null
+            return days?.let {
+                TrialAvailable(it)
+            }
         }
 
         private const val DAYS_IN_WEEK: Int = 7
