@@ -15,6 +15,7 @@ import com.peterlaurence.trekme.core.billing.data.model.AcknowledgePurchaseFunct
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsResolver
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.data.model.acknowledge
 import com.peterlaurence.trekme.core.billing.data.model.assureAcknowledgement
@@ -22,12 +23,11 @@ import com.peterlaurence.trekme.core.billing.data.model.containsOneTimeOrSub
 import com.peterlaurence.trekme.core.billing.data.model.getDetailsById
 import com.peterlaurence.trekme.core.billing.data.model.offerToken
 import com.peterlaurence.trekme.core.billing.data.model.toBillingParams
+import com.peterlaurence.trekme.core.billing.data.model.toSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.AccessGranted
 import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
-import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
-import com.peterlaurence.trekme.core.billing.domain.model.toSubscriptionDetails
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.millis
 import com.peterlaurence.trekme.util.recoverLogged

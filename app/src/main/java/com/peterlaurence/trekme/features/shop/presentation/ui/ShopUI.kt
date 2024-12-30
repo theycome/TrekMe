@@ -43,8 +43,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.peterlaurence.trekme.R
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
-import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.features.common.presentation.ui.scrollbar.drawVerticalScrollbar
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme

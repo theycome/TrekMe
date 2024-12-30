@@ -28,8 +28,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.peterlaurence.trekme.R
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
-import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
 import com.peterlaurence.trekme.core.billing.domain.model.TrialInfo
 import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable

@@ -1,11 +1,11 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.di.GpsPro
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
-import com.peterlaurence.trekme.core.billing.domain.model.SubscriptionDetails
 import com.peterlaurence.trekme.di.MainDispatcher
 import com.peterlaurence.trekme.util.recoverLogged
 import kotlinx.coroutines.CoroutineDispatcher

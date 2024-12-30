@@ -1,8 +1,11 @@
-package com.peterlaurence.trekme.core.billing.domain.model
+package com.peterlaurence.trekme.core.billing.data.model
 
 import arrow.core.raise.Raise
 import com.android.billingclient.api.ProductDetails
-import com.peterlaurence.trekme.core.billing.data.model.getPricingPhase
+import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
+import com.peterlaurence.trekme.core.billing.domain.model.TrialAvailable
+import com.peterlaurence.trekme.core.billing.domain.model.TrialInfo
+import com.peterlaurence.trekme.core.billing.domain.model.TrialUnavailable
 import java.util.UUID
 
 data class SubscriptionDetails(
