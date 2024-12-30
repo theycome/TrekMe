@@ -21,14 +21,11 @@ class HasOneExtendedOfferInteractor @Inject constructor(
     @TrekmeExtended
     private val extendedOfferStateOwner: ExtendedOfferStateOwner,
 ) {
-    fun getPurchaseFlow(scope: CoroutineScope): StateFlow<Boolean> {
-        val purchaseFlow: StateFlow<Boolean> = combine(
+    fun getPurchaseFlow(scope: CoroutineScope): StateFlow<Boolean> =
+        combine(
             extendedOfferWithIgnStateOwner.purchaseFlow,
             extendedOfferStateOwner.purchaseFlow
-        ) { x, y ->
-            x == PurchaseState.PURCHASED || y == PurchaseState.PURCHASED
+        ) { ignState, trekmeExtendedState ->
+            ignState == PurchaseState.PURCHASED || trekmeExtendedState == PurchaseState.PURCHASED
         }.stateIn(scope, SharingStarted.Eagerly, initialValue = false)
-
-        return purchaseFlow
-    }
 }
