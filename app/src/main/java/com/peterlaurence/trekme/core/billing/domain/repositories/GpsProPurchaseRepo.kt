@@ -31,6 +31,14 @@ class GpsProPurchaseRepo @Inject constructor(
     private val _subDetailsFlow = MutableStateFlow<SubscriptionDetails?>(null)
     override val subDetailsFlow = _subDetailsFlow.asStateFlow()
 
+    private val purchasesProcessor =
+        PurchasesProcessor(
+            billing = billing,
+            onPurchaseAcknowledged = ::onPurchaseAcknowledged,
+            onNotPurchased = ::updateSubscriptionInfo,
+            onUpdatePurchaseState = { state -> _purchaseFlow.value = state }
+        )
+
     init {
         scope.launch {
             billing.purchaseAcknowledgedEvent.collect {
@@ -39,22 +47,7 @@ class GpsProPurchaseRepo @Inject constructor(
         }
 
         scope.launch {
-
-            /* Check if we just need to acknowledge the purchase */
-            val ackDone = billing.queryAndAcknowledgePurchases()
-
-            /* Otherwise, do normal checks */
-            if (!ackDone) {
-                val result = if (billing.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()) {
-                    PurchaseState.PURCHASED
-                } else {
-                    updateSubscriptionInfo()
-                    PurchaseState.NOT_PURCHASED
-                }
-                _purchaseFlow.value = result
-            } else {
-                onPurchaseAcknowledged()
-            }
+            purchasesProcessor.invoke()
         }
     }
 

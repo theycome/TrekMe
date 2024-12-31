@@ -10,6 +10,7 @@ import com.peterlaurence.trekme.di.MainDispatcher
 import com.peterlaurence.trekme.util.recoverLogged
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,7 @@ import javax.inject.Singleton
 @Singleton
 class TrekmeExtendedRepository @Inject constructor(
     @MainDispatcher mainDispatcher: CoroutineDispatcher,
-    @TrekmeExtended private val billingApi: BillingApi<SubscriptionType.MonthAndYear>,
+    @TrekmeExtended private val billing: BillingApi<SubscriptionType.MonthAndYear>,
 ) : ExtendedOfferStateOwner {
 
     private val scope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -34,55 +35,45 @@ class TrekmeExtendedRepository @Inject constructor(
     private val _monthlySubDetailsFlow = MutableStateFlow<SubscriptionDetails?>(null)
     override val monthlySubDetailsFlow = _monthlySubDetailsFlow.asStateFlow()
 
+    private val purchasesProcessor =
+        PurchasesProcessor(
+            billing = billing,
+            onPurchaseAcknowledged = ::onPurchaseAcknowledged,
+            onNotPurchased = ::updateSubscriptionInfo,
+            onUpdatePurchaseState = { state -> _purchaseFlow.value = state }
+        )
+
     init {
         scope.launch {
-            billingApi.purchaseAcknowledgedEvent.collect {
+            billing.purchaseAcknowledgedEvent.collect {
                 onPurchaseAcknowledged()
             }
         }
 
         scope.launch {
-
-            /* Check if we just need to acknowledge the purchase */
-            val ackDone = billingApi.queryAndAcknowledgePurchases()
-
-            /* Otherwise, do normal checks */
-            if (!ackDone) {
-                updatePurchaseState()
-            } else {
-                onPurchaseAcknowledged()
-            }
+            purchasesProcessor.invoke()
         }
     }
 
     suspend fun updatePurchaseState() {
-        val result = if (billingApi.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()) {
-            PurchaseState.PURCHASED
-        } else {
-            updateSubscriptionInfo()
-            PurchaseState.NOT_PURCHASED
-        }
-        _purchaseFlow.value = result
+        purchasesProcessor.updatePurchaseState()
     }
 
-    fun acknowledgePurchase() = scope.launch {
-        val ackDone = billingApi.queryAndAcknowledgePurchases()
-        if (ackDone) {
-            onPurchaseAcknowledged()
-        }
+    fun acknowledgePurchase(): Job = scope.launch {
+        purchasesProcessor.acknowledgePurchase()
     }
 
     private fun updateSubscriptionInfo() {
         scope.launch {
             recoverLogged {
                 _yearlySubDetailsFlow.value =
-                    billingApi.getSubscriptionDetails(SubscriptionType.MonthAndYear.Year)
+                    billing.getSubscriptionDetails(SubscriptionType.MonthAndYear.Year)
             }
         }
         scope.launch {
             recoverLogged {
                 _monthlySubDetailsFlow.value =
-                    billingApi.getSubscriptionDetails(SubscriptionType.MonthAndYear.Month)
+                    billing.getSubscriptionDetails(SubscriptionType.MonthAndYear.Month)
             }
         }
     }
@@ -90,14 +81,14 @@ class TrekmeExtendedRepository @Inject constructor(
     fun buyYearlySubscription() {
         val subscriptionDetails = _yearlySubDetailsFlow.value
         if (subscriptionDetails != null) {
-            billingApi.launchBilling(subscriptionDetails, ::onPurchasePending)
+            billing.launchBilling(subscriptionDetails, ::onPurchasePending)
         }
     }
 
     fun buyMonthlySubscription() {
         val subscriptionDetails = _monthlySubDetailsFlow.value
         if (subscriptionDetails != null) {
-            billingApi.launchBilling(subscriptionDetails, ::onPurchasePending)
+            billing.launchBilling(subscriptionDetails, ::onPurchasePending)
         }
     }
 
@@ -108,4 +99,5 @@ class TrekmeExtendedRepository @Inject constructor(
     private fun onPurchaseAcknowledged() {
         _purchaseFlow.value = PurchaseState.PURCHASED
     }
+
 }
