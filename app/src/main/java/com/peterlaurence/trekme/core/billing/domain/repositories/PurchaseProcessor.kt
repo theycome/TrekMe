@@ -1,5 +1,6 @@
 package com.peterlaurence.trekme.core.billing.domain.repositories
 
+import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
@@ -9,14 +10,13 @@ import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
  *
  * Collect the common functionality used by repository classes
  */
-class PurchasesProcessor<T : SubscriptionType>(
+class PurchaseProcessor<T : SubscriptionType>(
     private val billing: BillingApi<T>,
-    private val onPurchaseAcknowledged: () -> Unit,
     private val onNotPurchased: () -> Unit,
     private val onUpdatePurchaseState: (PurchaseState) -> Unit,
 ) {
 
-    suspend operator fun invoke() {
+    suspend fun process() {
         if (!acknowledgePurchase()) {
             updatePurchaseState()
         }
@@ -38,6 +38,20 @@ class PurchasesProcessor<T : SubscriptionType>(
             PurchaseState.NOT_PURCHASED
         }
         onUpdatePurchaseState(state)
+    }
+
+    fun launchBillingWith(subscriptionDetails: SubscriptionDetails) {
+        billing.launchBilling(subscriptionDetails) {
+            onPurchasePending()
+        }
+    }
+
+    fun onPurchaseAcknowledged() {
+        onUpdatePurchaseState(PurchaseState.PURCHASED)
+    }
+
+    private fun onPurchasePending() {
+        onUpdatePurchaseState(PurchaseState.PURCHASE_PENDING)
     }
 
 }

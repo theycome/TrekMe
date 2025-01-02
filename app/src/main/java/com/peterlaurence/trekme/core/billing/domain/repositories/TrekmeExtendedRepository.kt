@@ -35,32 +35,41 @@ class TrekmeExtendedRepository @Inject constructor(
     private val _monthlySubDetailsFlow = MutableStateFlow<SubscriptionDetails?>(null)
     override val monthlySubDetailsFlow = _monthlySubDetailsFlow.asStateFlow()
 
-    private val purchasesProcessor =
-        PurchasesProcessor(
+    private val purchaseProcessor =
+        PurchaseProcessor(
             billing = billing,
-            onPurchaseAcknowledged = ::onPurchaseAcknowledged,
             onNotPurchased = ::updateSubscriptionInfo,
-            onUpdatePurchaseState = { state -> _purchaseFlow.value = state }
+            onUpdatePurchaseState = { state ->
+                _purchaseFlow.value = state
+            }
         )
+
+    // TODO - provide a map of SubscriptionType -> mutable flow, SubscriptionType -> immutable flow
+//    val map = mapOf(
+//        SubscriptionType.MonthAndYear.Month to "Month",
+//        SubscriptionType.MonthAndYear.Year to "Year",
+//    )
+//
+//    val l = sealedClassesInstances<SubscriptionType.MonthAndYear>()
 
     init {
         scope.launch {
             billing.purchaseAcknowledgedEvent.collect {
-                onPurchaseAcknowledged()
+                purchaseProcessor.onPurchaseAcknowledged()
             }
         }
 
         scope.launch {
-            purchasesProcessor.invoke()
+            purchaseProcessor.process()
         }
     }
 
     suspend fun updatePurchaseState() {
-        purchasesProcessor.updatePurchaseState()
+        purchaseProcessor.updatePurchaseState()
     }
 
     fun acknowledgePurchase(): Job = scope.launch {
-        purchasesProcessor.acknowledgePurchase()
+        purchaseProcessor.acknowledgePurchase()
     }
 
     private fun updateSubscriptionInfo() {
@@ -78,26 +87,11 @@ class TrekmeExtendedRepository @Inject constructor(
         }
     }
 
-    fun buyYearlySubscription() {
-        val subscriptionDetails = _yearlySubDetailsFlow.value
-        if (subscriptionDetails != null) {
-            billing.launchBilling(subscriptionDetails, ::onPurchasePending)
-        }
-    }
-
-    fun buyMonthlySubscription() {
-        val subscriptionDetails = _monthlySubDetailsFlow.value
-        if (subscriptionDetails != null) {
-            billing.launchBilling(subscriptionDetails, ::onPurchasePending)
-        }
-    }
-
-    private fun onPurchasePending() {
-        _purchaseFlow.value = PurchaseState.PURCHASE_PENDING
-    }
-
-    private fun onPurchaseAcknowledged() {
-        _purchaseFlow.value = PurchaseState.PURCHASED
+    fun buySubscription(subscriptionType: SubscriptionType.MonthAndYear) {
+        when (subscriptionType) {
+            is SubscriptionType.MonthAndYear.Month -> monthlySubDetailsFlow.value
+            is SubscriptionType.MonthAndYear.Year -> yearlySubDetailsFlow.value
+        }?.let(purchaseProcessor::launchBillingWith)
     }
 
 }

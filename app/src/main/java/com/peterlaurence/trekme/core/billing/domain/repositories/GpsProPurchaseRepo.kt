@@ -31,23 +31,24 @@ class GpsProPurchaseRepo @Inject constructor(
     private val _subDetailsFlow = MutableStateFlow<SubscriptionDetails?>(null)
     override val subDetailsFlow = _subDetailsFlow.asStateFlow()
 
-    private val purchasesProcessor =
-        PurchasesProcessor(
+    private val purchaseProcessor =
+        PurchaseProcessor(
             billing = billing,
-            onPurchaseAcknowledged = ::onPurchaseAcknowledged,
             onNotPurchased = ::updateSubscriptionInfo,
-            onUpdatePurchaseState = { state -> _purchaseFlow.value = state }
+            onUpdatePurchaseState = { state ->
+                _purchaseFlow.value = state
+            }
         )
 
     init {
         scope.launch {
             billing.purchaseAcknowledgedEvent.collect {
-                onPurchaseAcknowledged()
+                purchaseProcessor.onPurchaseAcknowledged()
             }
         }
 
         scope.launch {
-            purchasesProcessor.invoke()
+            purchaseProcessor.process()
         }
     }
 
@@ -60,18 +61,7 @@ class GpsProPurchaseRepo @Inject constructor(
     }
 
     fun buySubscription() {
-        val ignLicenseDetails = _subDetailsFlow.value
-        if (ignLicenseDetails != null) {
-            billing.launchBilling(ignLicenseDetails, ::onPurchasePending)
-        }
-    }
-
-    private fun onPurchasePending() {
-        _purchaseFlow.value = PurchaseState.PURCHASE_PENDING
-    }
-
-    private fun onPurchaseAcknowledged() {
-        _purchaseFlow.value = PurchaseState.PURCHASED
+        subDetailsFlow.value?.let(purchaseProcessor::launchBillingWith)
     }
 
 }
