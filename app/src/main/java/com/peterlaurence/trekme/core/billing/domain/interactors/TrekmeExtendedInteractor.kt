@@ -7,6 +7,7 @@ import javax.inject.Inject
 class TrekmeExtendedInteractor @Inject constructor(
     private val repository: TrekmeExtendedRepository,
 ) {
+
     fun buyMonthlySubscription() {
         repository.buySubscription(SubscriptionType.MonthAndYear.Month)
     }
@@ -18,4 +19,5 @@ class TrekmeExtendedInteractor @Inject constructor(
     fun acknowledgePurchase() {
         repository.acknowledgePurchase()
     }
+
 }
