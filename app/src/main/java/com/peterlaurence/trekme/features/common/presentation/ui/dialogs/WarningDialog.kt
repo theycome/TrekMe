@@ -17,10 +17,10 @@ fun WarningDialog(
     title: String,
     contentText: String,
     confirmButtonText: String = stringResource(id = R.string.ok_dialog),
-    onConfirmPressed: () -> Unit = {},
     confirmColorBackground: Color? = null,
     dismissButtonText: String? = null,
-    onDismissRequest: () -> Unit
+    onConfirmPressed: () -> Unit = {},
+    onDismissRequest: () -> Unit,
 ) {
     AlertDialog(
         title = {

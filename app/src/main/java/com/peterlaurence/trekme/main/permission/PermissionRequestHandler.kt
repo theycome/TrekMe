@@ -44,10 +44,12 @@ fun PermissionRequestHandler(
     appEventBus: AppEventBus,
     gpsProEvents: GpsProEvents,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) {
     val context = LocalContext.current
+
     val activity = context.activity
+
     val storagePermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { isGranted: Map<String, @JvmSuppressWildcards Boolean> ->
@@ -78,11 +80,11 @@ fun PermissionRequestHandler(
         WarningDialog(
             title = stringResource(id = R.string.warning_title),
             contentText = stringResource(id = R.string.no_storage_perm),
+            confirmButtonText = stringResource(id = R.string.ok_dialog),
             onConfirmPressed = {
                 isShowingAndroid9AndBelowRationale = false
                 storagePermLauncher.launch(MIN_PERMISSIONS_ANDROID_9_AND_BELOW)
             },
-            confirmButtonText = stringResource(id = R.string.ok_dialog),
             onDismissRequest = {
                 isShowingAndroid9AndBelowRationale = false
                 storagePermLauncher.launch(MIN_PERMISSIONS_ANDROID_9_AND_BELOW)
@@ -96,11 +98,11 @@ fun PermissionRequestHandler(
         WarningDialog(
             title = stringResource(id = R.string.warning_title),
             contentText = stringResource(id = R.string.no_location_perm),
+            confirmButtonText = stringResource(id = R.string.ok_dialog),
             onConfirmPressed = {
                 isShowingLocationRationale = false
                 openAppSettings(activity)
             },
-            confirmButtonText = stringResource(id = R.string.ok_dialog),
             onDismissRequest = {
                 isShowingLocationRationale = false
             }
