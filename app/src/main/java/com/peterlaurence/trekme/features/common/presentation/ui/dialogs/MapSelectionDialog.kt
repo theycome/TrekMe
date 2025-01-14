@@ -62,9 +62,8 @@ fun MapSelectionDialogStateful(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val map = mapUIList.getOrNull(selectedIndex)
-                    if (map != null) {
-                        onMapSelected(map)
+                    mapUIList.getOrNull(selectedIndex)?.let {
+                        onMapSelected(it)
                     }
                     onDismissRequest()
                 }
