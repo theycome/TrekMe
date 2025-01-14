@@ -89,7 +89,7 @@ fun BottomSheet(
     onTitleChange: (String, TrackType) -> Unit,
     onEditPath: (ExcursionRef) -> Unit,
     onSharePath: (ExcursionRef) -> Unit,
-    onDelete: (TrackType) -> Unit
+    onDelete: (TrackType) -> Unit,
 ) {
     val anchors = remember {
         DraggableAnchors {
@@ -163,7 +163,7 @@ private fun LazyListScope.titleSection(
     onTitleChange: (String) -> Unit,
     onEditPath: (() -> Unit)?,
     onShare: (() -> Unit)?,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     stickyHeader("title") {
         val title by titleFlow.collectAsState()
@@ -310,9 +310,9 @@ private fun LazyListScope.titleSection(
         if (showDeleteConfirmation) {
             ConfirmDialog(
                 contentText = stringResource(R.string.delete_track_confirm),
-                onConfirmPressed = onDelete,
-                cancelButtonText = stringResource(R.string.cancel_dialog_string),
                 confirmButtonText = stringResource(R.string.delete_dialog),
+                cancelButtonText = stringResource(R.string.cancel_dialog_string),
+                onConfirmPressed = onDelete,
                 onDismissRequest = { showDeleteConfirmation = false }
             )
         }
@@ -356,7 +356,7 @@ private fun LazyListScope.statsSection(geoStatistics: GeoStatistics, hasElevatio
 
 private fun LazyListScope.elevationGraphSection(
     data: BottomSheetState.BottomSheetData,
-    onCursorMove: (latLon: LatLon, d: Double, ele: Double) -> Unit
+    onCursorMove: (latLon: LatLon, d: Double, ele: Double) -> Unit,
 ) {
     if (data.elevationGraphPoints != null) {
         item(key = "elevation-graph") {
@@ -394,7 +394,7 @@ private fun LazyListScope.elevationGraphSection(
 private fun EditTitleDialog(
     title: String,
     onTitleChange: (String) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     var textFieldValue by remember {
         mutableStateOf(

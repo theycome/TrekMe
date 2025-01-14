@@ -102,17 +102,17 @@ import com.peterlaurence.trekme.features.trailsearch.presentation.ui.component.E
 import com.peterlaurence.trekme.features.trailsearch.presentation.ui.component.ElevationGraphPoint
 import com.peterlaurence.trekme.features.trailsearch.presentation.ui.component.GeoPlaceListComponent
 import com.peterlaurence.trekme.features.trailsearch.presentation.ui.dialog.MapSourceDataSelect
-import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.TrailMapViewModel.Event
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.AwaitingLocation
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.DownloadNotAllowed
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.DownloadNotAllowedReason
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.Error
-import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.TrailMapViewModel
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.Loading
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.LoadingLayer
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.MapDownloadData
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.MapDownloadState
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.MapReady
+import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.TrailMapViewModel
+import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.TrailMapViewModel.Event
 import com.peterlaurence.trekme.features.trailsearch.presentation.viewmodel.UiState
 import com.peterlaurence.trekme.util.ResultL
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
@@ -129,13 +129,12 @@ import ovh.plrapps.mapcompose.ui.state.MapState
 import java.util.UUID
 import kotlin.math.roundToInt
 
-
 @Composable
 fun TrailMapStateful(
     viewModel: TrailMapViewModel = hiltViewModel(),
     onGoToMapList: () -> Unit,
     onGoToShop: () -> Unit,
-    onGoToMapCreation: () -> Unit
+    onGoToMapCreation: () -> Unit,
 ) {
     val uiState by viewModel.uiStateFlow.collectAsStateWithLifecycle()
     val geoplaceList by viewModel.geoPlaceFlow.collectAsStateWithLifecycle()
@@ -293,17 +292,18 @@ fun TrailMapStateful(
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(5.dp))
-                                .background(it.second)
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(it.second)
                             )
 
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(text = it.first.name ?: "")
                         }
 
-                        if (index < data.size - 1 ) {
+                        if (index < data.size - 1) {
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
@@ -317,8 +317,8 @@ fun TrailMapStateful(
             contentText = stringResource(id = R.string.excursion_map_download),
             confirmButtonText = stringResource(id = R.string.ok_dialog),
             cancelButtonText = stringResource(id = R.string.no_dialog),
-            onDismissRequest = { isShowingMapDownloadDialog = false },
             onConfirmPressed = onGoToMapList,
+            onDismissRequest = { isShowingMapDownloadDialog = false },
         )
     }
 
@@ -376,7 +376,7 @@ private fun ExcursionMapScreen(
     onDownload: () -> Unit = {},
     onLayerSelection: () -> Unit = {},
     onGoToMapCreation: () -> Unit = {},
-    onTipAck: () -> Unit = {}
+    onTipAck: () -> Unit = {},
 ) {
     var isInSearchMode by rememberSaveable {
         mutableStateOf(false)
@@ -460,7 +460,10 @@ private fun ExcursionMapScreen(
                                     onLocationSearch(it)
                                 },
                                 singleLine = true,
-                                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp),
+                                textStyle = LocalTextStyle.current.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp
+                                ),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
                             ) { innerTextField ->
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -556,7 +559,7 @@ private fun BottomSheet(
     swipeableState: SwipeableState<States>,
     bottomSheetDataState: ResultL<BottomSheetData?>,
     onCursorMove: (latLon: LatLon, d: Double, ele: Double) -> Unit = { _, _, _ -> },
-    onToggleDownloadMapOption: () -> Unit = {}
+    onToggleDownloadMapOption: () -> Unit = {},
 ) {
     CollapsibleBottomSheet(
         swipeableState = swipeableState,
@@ -623,14 +626,15 @@ private fun LazyListScope.statisticsSection(data: BottomSheetData) {
 
 private fun LazyListScope.elevationGraphSection(
     data: BottomSheetData,
-    onCursorMove: (latLon: LatLon, d: Double, ele: Double) -> Unit
+    onCursorMove: (latLon: LatLon, d: Double, ele: Double) -> Unit,
 ) {
     if (data.elevationGraphPoints != null) {
         item(key = "elevation-graph") {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)) {
+                    .padding(16.dp)
+            ) {
                 Text(
                     stringResource(id = R.string.maybe_unordered),
                     fontStyle = FontStyle.Italic,
@@ -657,7 +661,7 @@ private fun LazyListScope.elevationGraphSection(
 private fun LazyListScope.downloadSection(
     mapDownloadState: MapDownloadState,
     isChecked: Boolean,
-    onToggleDownloadMapOption: () -> Unit
+    onToggleDownloadMapOption: () -> Unit,
 ) {
     item {
         Row(
@@ -767,7 +771,7 @@ private fun ExcursionMap(
 private suspend fun makeBottomSheetData(
     geoRecord: GeoRecord,
     mapDownloadState: MapDownloadState,
-    isDownloadOptionChecked: Boolean
+    isDownloadOptionChecked: Boolean,
 ): BottomSheetData {
     val points = mutableListOf<ElevationGraphPoint>()
     val stats = withContext(Dispatchers.Default) {
@@ -802,13 +806,13 @@ private data class BottomSheetData(
     val elevationGraphPoints: List<ElevationGraphPoint>?,
     val maybeUnordered: Boolean,
     val mapDownloadState: MapDownloadState,
-    val isDownloadOptionChecked: Boolean
+    val isDownloadOptionChecked: Boolean,
 )
 
 @Composable
 private fun EscapeHatchScreen(
     modifier: Modifier = Modifier,
-    onGoToMapCreation: () -> Unit = {}
+    onGoToMapCreation: () -> Unit = {},
 ) {
     Column(
         modifier

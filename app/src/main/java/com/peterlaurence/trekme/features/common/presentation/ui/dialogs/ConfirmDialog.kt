@@ -1,18 +1,23 @@
 package com.peterlaurence.trekme.features.common.presentation.ui.dialogs
 
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 
 @Composable
 fun ConfirmDialog(
-    onConfirmPressed: () -> Unit,
     contentText: String,
     confirmButtonText: String,
     cancelButtonText: String,
     confirmColorBackground: Color? = null,
-    onDismissRequest: () -> Unit
+    onConfirmPressed: () -> Unit,
+    onDismissRequest: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,

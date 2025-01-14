@@ -6,13 +6,31 @@ import android.content.Intent
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.net.Uri
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +62,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun AboutStateful(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -93,10 +111,10 @@ fun AboutStateful(
     if (isShowingEmailConfirmation) {
         ConfirmDialog(
             contentText = stringResource(R.string.email_explanation),
-            onConfirmPressed = { sendMail(context)},
-            onDismissRequest = { isShowingEmailConfirmation = false },
             confirmButtonText = stringResource(R.string.ok_dialog),
-            cancelButtonText = stringResource(R.string.cancel_dialog_string)
+            cancelButtonText = stringResource(R.string.cancel_dialog_string),
+            onConfirmPressed = { sendMail(context) },
+            onDismissRequest = { isShowingEmailConfirmation = false }
         )
     }
 }
@@ -110,7 +128,7 @@ fun AboutScreen(
     onAppRating: () -> Unit,
     onSendMail: () -> Unit,
     onBackClick: () -> Unit,
-    onLinkError: () -> Unit
+    onLinkError: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -147,7 +165,7 @@ fun AboutScreen(
 
 @Composable
 private fun ColumnScope.UserManualSection(
-    onUserManualClick: () -> Unit
+    onUserManualClick: () -> Unit,
 ) {
     Text(
         stringResource(
@@ -174,7 +192,7 @@ private fun ColumnScope.UserManualSection(
 
 @Composable
 private fun ColumnScope.AppRatingSection(
-    onAppRating: () -> Unit
+    onAppRating: () -> Unit,
 ) {
     Text(
         stringResource(
@@ -204,7 +222,7 @@ private fun ColumnScope.AppRatingSection(
 
 @Composable
 private fun ColumnScope.UserFeedback(
-    onSendMail: () -> Unit
+    onSendMail: () -> Unit,
 ) {
     Text(
         stringResource(id = R.string.user_feedback),

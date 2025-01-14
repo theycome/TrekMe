@@ -6,22 +6,58 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.DismissDirection.EndToStart
 import androidx.compose.material.DismissDirection.StartToEnd
-import androidx.compose.material.DismissValue.*
+import androidx.compose.material.DismissValue.Default
+import androidx.compose.material.DismissValue.DismissedToEnd
+import androidx.compose.material.DismissValue.DismissedToStart
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.rememberDismissState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -51,7 +87,7 @@ import kotlinx.coroutines.flow.update
 fun TracksManageStateful(
     viewModel: TracksManageViewModel = hiltViewModel(),
     onNavigateToMap: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
 ) {
     val routes by viewModel.getRouteFlow().collectAsState()
     val excursionRefs by viewModel.getExcursionRefsFlow().collectAsState()
@@ -59,15 +95,15 @@ fun TracksManageStateful(
 
     val selectables by produceState(
         initialValue = excursionRefs.map { SelectableExcursion(it, false) } +
-                routes.map { SelectableRoute(it, false) },
+            routes.map { SelectableRoute(it, false) },
         key1 = routes,
         key2 = excursionRefs,
         key3 = selectionId,
         producer = {
             value = excursionRefs.map { SelectableExcursion(it, it.id == selectionId) } +
-                    routes.map {
-                        SelectableRoute(it, it.id == selectionId)
-                    }
+                routes.map {
+                    SelectableRoute(it, it.id == selectionId)
+                }
         }
     )
 
@@ -102,9 +138,11 @@ fun TracksManageStateful(
                     )
                 )
             }
+
             GeoRecordImportResult.GeoRecordImportError -> {
                 snackbarHostState.showSnackbar(errorMsg)
             }
+
             GeoRecordImportResult.GeoRecordOutOfBounds -> {
                 snackbarHostState.showSnackbar(outOfBoundsMsg)
             }
@@ -125,6 +163,7 @@ fun TracksManageStateful(
                     is SelectableExcursion -> {
                         viewModel.onRenameExcursion(selectable.excursionRef, newName)
                     }
+
                     is SelectableRoute -> {
                         viewModel.onRenameRoute(selectable.route, newName)
                     }
@@ -139,6 +178,7 @@ fun TracksManageStateful(
                     is SelectableExcursion -> {
                         viewModel.centerOnExcursion(selectable.excursionRef)
                     }
+
                     is SelectableRoute -> {
                         viewModel.centerOnRoute(selectable.route)
                     }
@@ -155,6 +195,7 @@ fun TracksManageStateful(
                     is SelectableExcursion -> {
                         viewModel.toggleExcursionVisibility(selectable.excursionRef)
                     }
+
                     is SelectableRoute -> {
                         viewModel.toggleRouteVisibility(selectable.route)
                     }
@@ -169,6 +210,7 @@ fun TracksManageStateful(
                     is SelectableExcursion -> {
                         viewModel.onColorChange(selectable.excursionRef, c)
                     }
+
                     is SelectableRoute -> {
                         viewModel.onColorChange(selectable.route, c)
                     }
@@ -185,16 +227,16 @@ fun TracksManageStateful(
 
     routeToRemoveModal?.also { selectable ->
         ConfirmDialog(
+            contentText = stringResource(id = R.string.track_remove_question),
+            confirmButtonText = stringResource(id = R.string.delete_dialog),
+            cancelButtonText = stringResource(id = R.string.cancel_dialog_string),
+            confirmColorBackground = MaterialTheme.colorScheme.error,
             onConfirmPressed = {
                 when (selectable) {
                     is SelectableExcursion -> viewModel.onRemoveExcursion(selectable.excursionRef)
                     is SelectableRoute -> viewModel.onRemoveRoute(selectable.route)
                 }
             },
-            contentText = stringResource(id = R.string.track_remove_question),
-            confirmButtonText = stringResource(id = R.string.delete_dialog),
-            cancelButtonText = stringResource(id = R.string.cancel_dialog_string),
-            confirmColorBackground = MaterialTheme.colorScheme.error,
             onDismissRequest = { routeToRemoveModal = null }
         )
     }
@@ -213,7 +255,7 @@ private fun TracksManageScreen(
     onAllVisibilityChange: (Boolean) -> Unit = {},
     onColorChange: (id: String, Long) -> Unit,
     onRemove: (Selectable) -> Unit,
-    onAddNewRoute: () -> Unit
+    onAddNewRoute: () -> Unit,
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -267,7 +309,7 @@ private fun TrackTopAppbar(
     state: TopAppBarState,
     onBackClick: () -> Unit,
     onRouteRename: (String) -> Unit,
-    onGoToRoute: () -> Unit
+    onGoToRoute: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var isShowingRenameModal by remember { mutableStateOf(false) }
@@ -372,7 +414,7 @@ private fun TrackList(
     onVisibilityToggle: (id: String) -> Unit = {},
     onAllVisibilityChange: (Boolean) -> Unit = {},
     onColorChange: (id: String, Long) -> Unit,
-    onRemove: (Selectable) -> Unit
+    onRemove: (Selectable) -> Unit,
 ) {
     LazyColumn(
         modifier
@@ -458,7 +500,7 @@ private fun TrackItem(
     index: Int,
     onVisibilityToggle: (id: String) -> Unit = {},
     onAllVisibilityChange: (Boolean) -> Unit = {},
-    onColorChange: (id: String, Long) -> Unit
+    onColorChange: (id: String, Long) -> Unit,
 ) {
     var isShowingColorPicker by remember { mutableStateOf(false) }
 
@@ -517,7 +559,7 @@ private fun TrackItem(
 private data class TopAppBarState(
     val hasOverflowMenu: Boolean,
     val hasCenterOnTrack: Boolean,
-    val currentTrackName: String
+    val currentTrackName: String,
 )
 
 private sealed interface Selectable {
@@ -527,8 +569,9 @@ private sealed interface Selectable {
     val color: StateFlow<String>
     val visible: StateFlow<Boolean>
 }
+
 private data class SelectableRoute(
-    val route: Route, override val isSelected: Boolean
+    val route: Route, override val isSelected: Boolean,
 ) : Selectable {
     override val id: String
         get() = route.id
@@ -541,7 +584,7 @@ private data class SelectableRoute(
 }
 
 private data class SelectableExcursion(
-    val excursionRef: ExcursionRef, override val isSelected: Boolean
+    val excursionRef: ExcursionRef, override val isSelected: Boolean,
 ) : Selectable {
     override val id: String
         get() = excursionRef.id
