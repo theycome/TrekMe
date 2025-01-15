@@ -2,13 +2,12 @@ package com.peterlaurence.trekme.features.common.presentation.ui.dialogs
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
+import com.peterlaurence.trekme.features.common.presentation.ui.ext.ButtonColorsExt
 
 @Composable
 fun ConfirmDialog(
@@ -30,9 +29,7 @@ fun ConfirmDialog(
                     onDismissRequest()
                     onConfirmPressed()
                 },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = confirmColorBackground ?: MaterialTheme.colorScheme.primary,
-                )
+                colors = ButtonColorsExt.withContainerColorOrPrimary(confirmColorBackground)
             ) {
                 Text(confirmButtonText)
             }

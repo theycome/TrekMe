@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -53,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.settings.privacyPolicyUrl
 import com.peterlaurence.trekme.features.common.presentation.ui.dialogs.ConfirmDialog
+import com.peterlaurence.trekme.features.common.presentation.ui.ext.ButtonColorsExt
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme
 import kotlinx.coroutines.launch
 
@@ -212,9 +212,7 @@ private fun ColumnScope.AppRatingSection(
             .padding(top = 8.dp)
             .align(Alignment.CenterHorizontally),
         onClick = onAppRating,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.tertiary,
-        )
+        colors = ButtonColorsExt.withContainerColorTertiary()
     ) {
         Text(stringResource(id = R.string.rate_the_app))
     }

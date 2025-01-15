@@ -1,6 +1,5 @@
 package com.peterlaurence.trekme.features.mapcreate.presentation.ui.overlay
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -63,6 +61,7 @@ import com.peterlaurence.trekme.core.wmts.domain.model.Road
 import com.peterlaurence.trekme.core.wmts.domain.model.ignCadastre
 import com.peterlaurence.trekme.core.wmts.domain.model.ignRoad
 import com.peterlaurence.trekme.core.wmts.domain.model.ignSlopes
+import com.peterlaurence.trekme.features.common.presentation.ui.ext.ButtonColorsExt
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeTheme
 import com.peterlaurence.trekme.features.mapcreate.presentation.viewmodel.LayerOverlayViewModel
 
@@ -76,7 +75,7 @@ import com.peterlaurence.trekme.features.mapcreate.presentation.viewmodel.LayerO
 @Composable
 fun LayerOverlayStateful(
     viewModel: LayerOverlayViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val layerProperties by viewModel.getLayerPropertiesFlow().collectAsState()
     var isShowingLayerDialog by remember { mutableStateOf(false) }
@@ -115,7 +114,7 @@ fun LayerOverlayStateful(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LayerOverlayScreen(
     layerProperties: List<LayerProperties>,
@@ -124,7 +123,7 @@ private fun LayerOverlayScreen(
     onRemove: (String) -> Unit,
     onUpdateOpacity: (opacity: Float, layerId: String) -> Unit,
     onAddLayer: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var selectedLayerId by remember { mutableStateOf<String?>(null) }
 
@@ -278,7 +277,7 @@ private fun LayerSelectDialog(
     confirmButtonText: String,
     cancelButtonText: String,
     confirmColorBackground: Color? = null,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     var selectedId by remember { mutableStateOf<String?>(null) }
 
@@ -316,9 +315,7 @@ private fun LayerSelectDialog(
                     onDismissRequest()
                     onConfirmPressed(selectedId)
                 },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = confirmColorBackground ?: MaterialTheme.colorScheme.primary,
-                )
+                colors = ButtonColorsExt.withContainerColorOrPrimary(confirmColorBackground)
             ) {
                 Text(confirmButtonText)
             }
