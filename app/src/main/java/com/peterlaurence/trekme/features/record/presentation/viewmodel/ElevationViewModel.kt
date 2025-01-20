@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.features.record.domain.interactors.UpdateElevationGraphInteractor
 import com.peterlaurence.trekme.features.record.domain.interactors.UpdateGeoRecordElevationsInteractor
 import com.peterlaurence.trekme.features.record.domain.model.ElevationCorrectionErrorEvent
@@ -15,7 +15,6 @@ import com.peterlaurence.trekme.features.record.domain.model.ElevationStateOwner
 import com.peterlaurence.trekme.features.record.domain.model.NoNetworkEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import java.util.*
 import javax.inject.Inject
 
 /**
@@ -51,6 +50,7 @@ class ElevationViewModel @Inject constructor(
                             updateGeoRecordElevationsInteractor.updateElevations(state)
                         }
                     }
+
                     else -> {
                     } // Nothing to do
                 }
@@ -65,6 +65,7 @@ class ElevationViewModel @Inject constructor(
                         val msg = ctx.getString(R.string.elevation_correction_error)
                         appEventBus.postMessage(StandardMessage(msg, showLong = false))
                     }
+
                     is NoNetworkEvent -> {
                         val msg = if (!it.internetOk) {
                             ctx.getString(R.string.network_required)

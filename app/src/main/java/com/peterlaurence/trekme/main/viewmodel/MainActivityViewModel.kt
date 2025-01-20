@@ -4,11 +4,11 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.R
-import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.TrekMeContext
 import com.peterlaurence.trekme.core.billing.domain.interactors.TrekmeExtendedInteractor
 import com.peterlaurence.trekme.core.billing.domain.interactors.TrekmeExtendedWithIgnInteractor
 import com.peterlaurence.trekme.core.billing.domain.model.GpsProStateOwner
+import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
 import com.peterlaurence.trekme.core.location.domain.model.InternalGps
 import com.peterlaurence.trekme.core.map.domain.interactors.SetMapInteractor
 import com.peterlaurence.trekme.core.map.domain.interactors.UpdateMapsInteractor
@@ -17,8 +17,8 @@ import com.peterlaurence.trekme.core.settings.Settings
 import com.peterlaurence.trekme.core.settings.StartOnPolicy
 import com.peterlaurence.trekme.core.units.UnitFormatter
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.FatalMessage
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.FatalMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
 import com.peterlaurence.trekme.main.shortcut.Shortcut
 import com.peterlaurence.trekme.util.map
@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
-
 
 /**
  * This view-model is attached to the [MainActivity].
@@ -99,7 +98,7 @@ class MainActivityViewModel @Inject constructor(
 
             /* The shortcut takes precedence over the startup policy */
             if (shortcut != null) {
-                when(shortcut) {
+                when (shortcut) {
                     Shortcut.RECORDINGS -> event.send(MainActivityEvent.ShowRecordings)
                     Shortcut.LAST_MAP -> showLastMap()
                 }
@@ -117,11 +116,13 @@ class MainActivityViewModel @Inject constructor(
                     PurchaseState.PURCHASED -> {
                         _gpsProPurchased.value = true
                     }
+
                     PurchaseState.NOT_PURCHASED -> {
                         /* If denied, switch back to internal GPS */
                         settings.setLocationProducerInfo(InternalGps)
                         _gpsProPurchased.value = false
                     }
+
                     else -> { /* Nothing to do */
                     }
                 }
@@ -198,7 +199,8 @@ class MainActivityViewModel @Inject constructor(
         }
     }
 
-    fun getMapIndex(mapId: UUID): Int = mapRepository.getCurrentMapList().indexOfFirst { it.id == mapId }
+    fun getMapIndex(mapId: UUID): Int =
+        mapRepository.getCurrentMapList().indexOfFirst { it.id == mapId }
 }
 
 sealed interface MainActivityEvent {

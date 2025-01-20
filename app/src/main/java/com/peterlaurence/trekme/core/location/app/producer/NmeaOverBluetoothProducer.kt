@@ -3,23 +3,28 @@ package com.peterlaurence.trekme.core.location.app.producer
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
+import com.peterlaurence.trekme.core.lib.nmea.NmeaAggregator
+import com.peterlaurence.trekme.core.lib.nmea.parseNmeaLocationSentence
 import com.peterlaurence.trekme.core.location.domain.model.Location
 import com.peterlaurence.trekme.core.location.domain.model.LocationProducer
 import com.peterlaurence.trekme.core.location.domain.model.LocationProducerBtInfo
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
-import com.peterlaurence.trekme.core.lib.nmea.NmeaAggregator
-import com.peterlaurence.trekme.core.lib.nmea.parseNmeaLocationSentence
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
 import com.peterlaurence.trekme.events.gpspro.GpsProEvents
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.Executors
 import kotlin.time.TimeSource
 
@@ -32,7 +37,7 @@ class NmeaOverBluetoothProducer(
     private val connectionLostMsg: String,
     private val mode: LocationProducerBtInfo,
     private val appEventBus: AppEventBus,
-    private val gpsProEvents: GpsProEvents
+    private val gpsProEvents: GpsProEvents,
 ) : LocationProducer {
 
     private val connectionDispatcher by lazy {
@@ -62,7 +67,7 @@ class NmeaOverBluetoothProducer(
 
     @SuppressLint("MissingPermission")
     private fun ProducerScope<Location>.connectAndRead(): Pair<BluetoothSocket?, Job> {
-        var _socket: BluetoothSocket? = null
+        var socketReturned: BluetoothSocket? = null
 
         val job = launch(connectionDispatcher) {
             val uuid = UUID.fromString(SPP_UUID)
@@ -70,7 +75,7 @@ class NmeaOverBluetoothProducer(
                 bluetoothAdapter.getRemoteDevice(mode.macAddress)
                     .createRfcommSocketToServiceRecord(uuid)
             }.getOrNull() ?: return@launch
-            _socket = socket
+            socketReturned = socket
 
             runCatching {
                 socket.connect()
@@ -96,21 +101,34 @@ class NmeaOverBluetoothProducer(
                     val nmeaAggregator =
                         NmeaAggregator(nmeaDataFlow) { lat, lon, speed, altitude, time ->
                             trySend(
-                                Location(lat, lon, speed, altitude, time, timeSource.markNow(), mode)
+                                Location(
+                                    lat,
+                                    lon,
+                                    speed,
+                                    altitude,
+                                    time,
+                                    timeSource.markNow(),
+                                    mode
+                                )
                             )
                         }
                     nmeaAggregator.run()
                 }
             }.onFailure {
                 if (it is ConnectionLostException) {
-                    appEventBus.postMessage(StandardMessage(connectionLostMsg, showLong = true))
+                    appEventBus.postMessage(
+                        StandardMessage(
+                            connectionLostMsg,
+                            showLong = true
+                        )
+                    )
                 }
                 runCatching { socket.close() }
-                delay(2000)
+                delay(2_000)
                 connectAndRead()
             }
         }
-        return Pair(_socket, job)
+        return Pair(socketReturned, job)
     }
 }
 

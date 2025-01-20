@@ -31,8 +31,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.rememberNavController
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.FatalMessage
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.FatalMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.events.gpspro.GpsProEvents
 import com.peterlaurence.trekme.events.maparchive.MapArchiveEvents
 import com.peterlaurence.trekme.features.common.presentation.ui.dialogs.WarningDialog
@@ -70,7 +70,7 @@ fun MainStateful(
     recordingEventHandlerViewModel: RecordingEventHandlerViewModel,
     appEventBus: AppEventBus,
     gpsProEvents: GpsProEvents,
-    mapArchiveEvents: MapArchiveEvents
+    mapArchiveEvents: MapArchiveEvents,
 ) {
     val mapsInitializing by viewModel.mapsInitializing.collectAsState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)

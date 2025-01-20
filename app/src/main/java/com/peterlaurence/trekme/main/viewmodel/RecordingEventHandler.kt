@@ -8,7 +8,7 @@ import com.peterlaurence.trekme.core.map.domain.interactors.GetMapInteractor
 import com.peterlaurence.trekme.core.map.domain.models.BoundingBox
 import com.peterlaurence.trekme.core.map.domain.models.intersects
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
 import com.peterlaurence.trekme.events.recording.GpxRecordEvents
 import com.peterlaurence.trekme.features.common.domain.interactors.MapExcursionInteractor
 import com.peterlaurence.trekme.features.record.app.service.event.NewExcursionEvent
@@ -29,7 +29,7 @@ class RecordingEventHandlerViewModel @Inject constructor(
     private val getMapInteractor: GetMapInteractor,
     private val appEventBus: AppEventBus,
     @ApplicationContext
-    private val appContext: Context
+    private val appContext: Context,
 ) : ViewModel() {
 
     fun onNewExcursionEvent(event: NewExcursionEvent) = viewModelScope.launch {
@@ -51,4 +51,5 @@ class RecordingEventHandlerViewModel @Inject constructor(
             appEventBus.postMessage(StandardMessage(msg))
         }
     }
+
 }

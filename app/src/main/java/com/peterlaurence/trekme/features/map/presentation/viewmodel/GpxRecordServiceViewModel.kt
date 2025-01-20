@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.events.recording.GpxRecordEvents
 import com.peterlaurence.trekme.features.record.app.service.GpxRecordService
 import com.peterlaurence.trekme.features.record.domain.model.GpxRecordState
@@ -83,7 +83,8 @@ class GpxRecordServiceViewModel @Inject constructor(
         }
 
         if (!isBackgroundLocationGranted(app.applicationContext)) {
-            val request = AppEventBus.BackgroundLocationRequest(R.string.background_location_rationale_gpx_recording)
+            val request =
+                AppEventBus.BackgroundLocationRequest(R.string.background_location_rationale_gpx_recording)
             appEventBus.requestBackgroundLocation(request)
 
             val granted = appEventBus.backgroundLocationResult.receive()
@@ -115,4 +116,4 @@ class GpxRecordServiceViewModel @Inject constructor(
     }
 }
 
-const val START_STOP_DISABLE_TIMEOUT = 2000
+const val START_STOP_DISABLE_TIMEOUT = 2_000

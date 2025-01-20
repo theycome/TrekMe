@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.features.map.presentation.events.MapFeatureEvents
 import com.peterlaurence.trekme.util.android.isBackgroundLocationGranted
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,8 +20,8 @@ import javax.inject.Inject
 class BeaconServiceLauncherViewModel @Inject constructor(
     mapFeatureEvents: MapFeatureEvents,
     appEventBus: AppEventBus,
-    @ApplicationContext appContext: Context
-): ViewModel() {
+    @ApplicationContext appContext: Context,
+) : ViewModel() {
 
     private val _startServiceEvent = Channel<Unit>(1)
     val startServiceEvent = _startServiceEvent.receiveAsFlow()

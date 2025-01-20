@@ -8,7 +8,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.media.MediaPlayer
-import android.os.*
+import android.os.Build
+import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -17,7 +21,7 @@ import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.location.domain.model.LocationSource
 import com.peterlaurence.trekme.core.settings.Settings
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
 import com.peterlaurence.trekme.features.common.presentation.ui.theme.md_theme_light_primary
 import com.peterlaurence.trekme.features.map.domain.core.TrackVicinityAlgorithm
 import com.peterlaurence.trekme.features.map.domain.models.TrackFollowServiceState
@@ -28,9 +32,16 @@ import com.peterlaurence.trekme.main.MainActivity
 import com.peterlaurence.trekme.util.getBitmapFromDrawable
 import com.peterlaurence.trekme.util.throttle
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -190,7 +201,8 @@ class TrackFollowService : Service() {
             this@TrackFollowService.data = data
 
             /* Notify the rest the app that the service is started */
-            trackFollowRepository.serviceState.value = TrackFollowServiceState.Started(data.mapId, data.trackId)
+            trackFollowRepository.serviceState.value =
+                TrackFollowServiceState.Started(data.mapId, data.trackId)
             val algorithm = TrackVicinityAlgorithm(data.verifier)
 
             processLocation(algorithm)
@@ -200,7 +212,10 @@ class TrackFollowService : Service() {
     }
 
     private suspend fun processLocation(algorithm: TrackVicinityAlgorithm) {
-        combine(locationSource.locationFlow.throttle(5000), settings.getTrackFollowThreshold()) { loc, threshold ->
+        combine(
+            locationSource.locationFlow.throttle(5000),
+            settings.getTrackFollowThreshold()
+        ) { loc, threshold ->
             val shouldAlert = algorithm.processLocation(loc, threshold)
 
             if (shouldAlert) {

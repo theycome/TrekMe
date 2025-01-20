@@ -1,7 +1,10 @@
 package com.peterlaurence.trekme.features.mapcreate.app.service.download
 
 import android.annotation.SuppressLint
-import android.app.*
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -11,15 +14,22 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.map.domain.interactors.MapDownloadInteractor
-import com.peterlaurence.trekme.core.map.domain.models.*
-import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
+import com.peterlaurence.trekme.core.map.domain.models.MapDownloadAlreadyRunning
+import com.peterlaurence.trekme.core.map.domain.models.MapDownloadSpec
+import com.peterlaurence.trekme.core.map.domain.models.NewDownloadSpec
+import com.peterlaurence.trekme.core.map.domain.models.UpdateSpec
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
+import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
 import com.peterlaurence.trekme.main.MainActivity
 import com.peterlaurence.trekme.util.getBitmapFromDrawable
 import com.peterlaurence.trekme.util.throttle
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -191,6 +201,7 @@ class DownloadService : Service() {
                     onProgress = { p -> throttledTask.trySend(p) }
                 )
             }
+
             is UpdateSpec -> {
                 repository.setStatus(DownloadRepository.UpdatingMap(spec))
                 appEventBus.postMessage(StandardMessage(getString(R.string.repair_confirm)))

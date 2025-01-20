@@ -16,7 +16,7 @@ import com.peterlaurence.trekme.core.excursion.domain.repository.ExcursionReposi
 import com.peterlaurence.trekme.core.location.domain.model.LocationSource
 import com.peterlaurence.trekme.core.settings.Settings
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
 import com.peterlaurence.trekme.events.recording.GpxRecordEvents
 import com.peterlaurence.trekme.features.record.data.datasource.LocationSerializerImpl
 import com.peterlaurence.trekme.features.record.data.datasource.createSinkFile
@@ -198,4 +198,6 @@ class GpxRecordService : Service() {
         private const val NOTIFICATION_ID = "peterlaurence.GpxRecordService"
         private const val SERVICE_ID = 126585
     }
+    
 }
+

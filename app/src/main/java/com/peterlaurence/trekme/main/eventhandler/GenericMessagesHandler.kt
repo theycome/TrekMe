@@ -2,10 +2,10 @@ package com.peterlaurence.trekme.main.eventhandler
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import com.peterlaurence.trekme.events.FatalMessage
 import com.peterlaurence.trekme.events.GenericMessage
-import com.peterlaurence.trekme.events.StandardMessage
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.FatalMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import com.peterlaurence.trekme.util.compose.showSnackbar
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +18,7 @@ fun HandleGenericMessages(
     scope: CoroutineScope,
     snackbarHostState: SnackbarHostState,
     onShowWarningDialog: (WarningMessage) -> Unit,
-    onShowErrorDialog: (FatalMessage) -> Unit
+    onShowErrorDialog: (FatalMessage) -> Unit,
 ) {
     LaunchedEffectWithLifecycle(genericMessages) { message ->
         when (message) {

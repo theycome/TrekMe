@@ -13,8 +13,8 @@ import androidx.compose.ui.res.stringResource
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.map.domain.interactors.ArchiveMapInteractor
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.StandardMessage
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.StandardMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.events.maparchive.MapArchiveEvents
 import com.peterlaurence.trekme.util.android.activity
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
@@ -103,4 +103,5 @@ fun MapArchiveEventHandler(appEventBus: AppEventBus, mapArchiveEvents: MapArchiv
             }
         }
     }
+
 }

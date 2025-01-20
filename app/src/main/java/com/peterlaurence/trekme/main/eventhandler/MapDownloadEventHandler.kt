@@ -15,7 +15,7 @@ import com.peterlaurence.trekme.core.map.domain.models.MapNotRepairable
 import com.peterlaurence.trekme.core.map.domain.models.MapUpdateFinished
 import com.peterlaurence.trekme.core.map.domain.models.MapUpdatePending
 import com.peterlaurence.trekme.core.map.domain.models.MissingApiError
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.features.mapcreate.presentation.ui.navigation.wmtsDestination
 import com.peterlaurence.trekme.main.ui.navigation.navigateToMapList
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
@@ -33,7 +33,7 @@ fun MapDownloadEventHandler(
     scope: CoroutineScope,
     context: Context,
     onGoToMap: (UUID) -> Unit,
-    onShowWarningDialog: (WarningMessage) -> Unit
+    onShowWarningDialog: (WarningMessage) -> Unit,
 ) {
     LaunchedEffectWithLifecycle(downloadEvents) { event ->
         when (event) {

@@ -7,7 +7,7 @@ import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.geotools.distanceApprox
 import com.peterlaurence.trekme.core.map.domain.models.Map
 import com.peterlaurence.trekme.events.AppEventBus
-import com.peterlaurence.trekme.events.WarningMessage
+import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.features.map.domain.core.TrackVicinityVerifier
 import com.peterlaurence.trekme.features.map.domain.core.getLonLatFromNormalizedCoordinate
 import com.peterlaurence.trekme.features.map.domain.core.getNormalizedCoordinates
@@ -44,7 +44,7 @@ class TrackFollowLayer(
     private val mapFeatureEvents: MapFeatureEvents,
     private val appContext: Context,
     private val appEventBus: AppEventBus,
-    private val onTrackSelected: () -> Unit
+    private val onTrackSelected: () -> Unit,
 ) {
     private val trackFollowHighlightId = "track-followed-highlight"
 
@@ -59,7 +59,7 @@ class TrackFollowLayer(
         scope.launch {
             dataStateFlow.collectLatest { (map, mapState) ->
                 trackFollowRepository.serviceState.collect { state ->
-                    when(state) {
+                    when (state) {
                         is TrackFollowServiceState.Started -> {
                             if (map.id == state.mapId) {
                                 /* Need to wait the corresponding path to be rendered in the route layer */
@@ -67,6 +67,7 @@ class TrackFollowLayer(
                                 highlightFollowedTrack(mapState, state.trackId)
                             }
                         }
+
                         TrackFollowServiceState.Stopped -> {
                             /* Nothing, on purpose */
                         }
@@ -156,45 +157,89 @@ class TrackFollowLayer(
         } else true
     }
 
-    private fun startTrackFollowService(pathData: PathData, map: Map, trackId: String) = scope.launch {
-        /* Done this way, the TrackVicinityVerifier has no reference on this layer, so the view-model doesn't leak. */
-        val vicinityVerifier = object : TrackVicinityVerifier {
-            val trackFollowedId = "track-followed"
-            val mapState = MapState(levelCount = 1, fullWidth = map.widthPx, fullHeight = map.heightPx).apply {
-                addPath(trackFollowedId, pathData, simplify = 2f)
-            }
-            var pixelPerMeterThreshold: Double? = null
+    private fun startTrackFollowService(pathData: PathData, map: Map, trackId: String) =
+        scope.launch {
+            /* Done this way, the TrackVicinityVerifier has no reference on this layer, so the view-model doesn't leak. */
+            val vicinityVerifier = object : TrackVicinityVerifier {
+                val trackFollowedId = "track-followed"
+                val mapState = MapState(
+                    levelCount = 1,
+                    fullWidth = map.widthPx,
+                    fullHeight = map.heightPx
+                ).apply {
+                    addPath(trackFollowedId, pathData, simplify = 2f)
+                }
+                var pixelPerMeterThreshold: Double? = null
 
-            init {
-                processScope.launch {
-                    val latLonLeft = getLonLatFromNormalizedCoordinate(0.0, 0.5, map.projection, map.mapBounds)
-                    val latLonRight = getLonLatFromNormalizedCoordinate(1.0, 0.5, map.projection, map.mapBounds)
-                    val mapWidthInMeters = withContext(Dispatchers.Default) {
-                        distanceApprox(latLonLeft[1], latLonLeft[0], latLonRight[1], latLonRight[0])
+                init {
+                    processScope.launch {
+                        val latLonLeft = getLonLatFromNormalizedCoordinate(
+                            0.0,
+                            0.5,
+                            map.projection,
+                            map.mapBounds
+                        )
+                        val latLonRight = getLonLatFromNormalizedCoordinate(
+                            1.0,
+                            0.5,
+                            map.projection,
+                            map.mapBounds
+                        )
+                        val mapWidthInMeters = withContext(Dispatchers.Default) {
+                            distanceApprox(
+                                latLonLeft[1],
+                                latLonLeft[0],
+                                latLonRight[1],
+                                latLonRight[0]
+                            )
+                        }
+
+                        pixelPerMeterThreshold = map.widthPx.toDouble() / mapWidthInMeters
                     }
+                }
 
-                    pixelPerMeterThreshold = map.widthPx.toDouble() / mapWidthInMeters
+                override suspend fun isInVicinity(
+                    latitude: Double,
+                    longitude: Double,
+                    thresholdInMeters: Int,
+                ): Boolean {
+                    val pixelThreshold =
+                        ((this.pixelPerMeterThreshold ?: return true) * thresholdInMeters).toInt()
+                    val normalized =
+                        getNormalizedCoordinates(latitude, longitude, map.mapBounds, map.projection)
+                    return withContext(Dispatchers.Default) {
+                        mapState.isPathWithinRange(
+                            trackFollowedId,
+                            pixelThreshold,
+                            normalized[0],
+                            normalized[1]
+                        )
+                    }
                 }
             }
 
-            override suspend fun isInVicinity(latitude: Double, longitude: Double, thresholdInMeters: Int): Boolean {
-                val pixelThreshold = ((this.pixelPerMeterThreshold ?: return true) * thresholdInMeters).toInt()
-                val normalized = getNormalizedCoordinates(latitude, longitude, map.mapBounds, map.projection)
-                return withContext(Dispatchers.Default) {
-                    mapState.isPathWithinRange(trackFollowedId, pixelThreshold, normalized[0], normalized[1])
-                }
-            }
+            trackFollowRepository.serviceData.send(
+                TrackFollowRepository.ServiceData(
+                    vicinityVerifier,
+                    map.id,
+                    trackId
+                )
+            )
+            mapFeatureEvents.postStartTrackFollowService()
         }
-
-        trackFollowRepository.serviceData.send(TrackFollowRepository.ServiceData(vicinityVerifier, map.id, trackId))
-        mapFeatureEvents.postStartTrackFollowService()
-    }
 
     private fun highlightFollowedTrack(mapState: MapState, trackId: String) {
         mapState.updatePath(trackId, zIndex = 1f)
         val p = mapState.getPathData(trackId)
         if (p != null) {
-            mapState.addPath(trackFollowHighlightId, p, color = Color.Black, clickable = false, zIndex = 0f, width = 6.dp)
+            mapState.addPath(
+                trackFollowHighlightId,
+                p,
+                color = Color.Black,
+                clickable = false,
+                zIndex = 0f,
+                width = 6.dp
+            )
         }
     }
 
