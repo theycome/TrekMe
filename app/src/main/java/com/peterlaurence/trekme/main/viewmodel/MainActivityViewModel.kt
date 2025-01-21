@@ -3,6 +3,7 @@ package com.peterlaurence.trekme.main.viewmodel
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.core.TrekMeContext
 import com.peterlaurence.trekme.core.billing.domain.interactors.TrekmeExtendedInteractor
@@ -21,6 +22,9 @@ import com.peterlaurence.trekme.events.GenericMessage.FatalMessage
 import com.peterlaurence.trekme.events.GenericMessage.WarningMessage
 import com.peterlaurence.trekme.features.mapcreate.domain.repository.DownloadRepository
 import com.peterlaurence.trekme.main.shortcut.Shortcut
+import com.peterlaurence.trekme.main.ui.navigation.navigateToMap
+import com.peterlaurence.trekme.main.ui.navigation.navigateToMapList
+import com.peterlaurence.trekme.main.ui.navigation.navigateToRecord
 import com.peterlaurence.trekme.util.map
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -203,8 +207,14 @@ class MainActivityViewModel @Inject constructor(
         mapRepository.getCurrentMapList().indexOfFirst { it.id == mapId }
 }
 
-sealed interface MainActivityEvent {
-    data object ShowMapList : MainActivityEvent
-    data object ShowMap : MainActivityEvent
-    data object ShowRecordings : MainActivityEvent
+sealed class MainActivityEvent(
+    val navigateAction: NavHostController.() -> Unit,
+) {
+    data object ShowMapList :
+        MainActivityEvent(navigateAction = NavHostController::navigateToMapList)
+
+    data object ShowMap : MainActivityEvent(navigateAction = NavHostController::navigateToMap)
+
+    data object ShowRecordings :
+        MainActivityEvent(navigateAction = NavHostController::navigateToRecord)
 }

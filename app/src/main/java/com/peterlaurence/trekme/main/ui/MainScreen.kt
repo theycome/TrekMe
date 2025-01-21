@@ -1,10 +1,13 @@
 package com.peterlaurence.trekme.main.ui
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -16,6 +19,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -26,8 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.events.AppEventBus
@@ -48,7 +55,6 @@ import com.peterlaurence.trekme.main.ui.component.MainActivityLifecycleObserver
 import com.peterlaurence.trekme.main.ui.navigation.MainGraph
 import com.peterlaurence.trekme.main.ui.navigation.navigateToAbout
 import com.peterlaurence.trekme.main.ui.navigation.navigateToGpsPro
-import com.peterlaurence.trekme.main.ui.navigation.navigateToMap
 import com.peterlaurence.trekme.main.ui.navigation.navigateToMapCreation
 import com.peterlaurence.trekme.main.ui.navigation.navigateToMapImport
 import com.peterlaurence.trekme.main.ui.navigation.navigateToMapList
@@ -57,11 +63,11 @@ import com.peterlaurence.trekme.main.ui.navigation.navigateToSettings
 import com.peterlaurence.trekme.main.ui.navigation.navigateToShop
 import com.peterlaurence.trekme.main.ui.navigation.navigateToTrailSearch
 import com.peterlaurence.trekme.main.ui.navigation.navigateToWifiP2p
-import com.peterlaurence.trekme.main.viewmodel.MainActivityEvent
 import com.peterlaurence.trekme.main.viewmodel.MainActivityViewModel
 import com.peterlaurence.trekme.main.viewmodel.RecordingEventHandlerViewModel
 import com.peterlaurence.trekme.util.android.activity
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -72,33 +78,30 @@ fun MainStateful(
     gpsProEvents: GpsProEvents,
     mapArchiveEvents: MapArchiveEvents,
 ) {
-    val mapsInitializing by viewModel.mapsInitializing.collectAsState()
+
+    val context = LocalContext.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
-    val context = LocalContext.current
+    val mapsInitializing by viewModel.mapsInitializing.collectAsState()
 
-    LaunchedEffectWithLifecycle(viewModel.eventFlow) { event ->
-        when (event) {
-            MainActivityEvent.ShowMap -> navController.navigateToMap()
-            MainActivityEvent.ShowMapList -> navController.navigateToMapList()
-            MainActivityEvent.ShowRecordings -> navController.navigateToRecord()
-        }
+    LaunchedEffectWithLifecycle(viewModel.eventFlow) {
+        navController.let(it.navigateAction)
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var isShowingWarningDialog by remember { mutableStateOf<WarningMessage?>(null) }
-    isShowingWarningDialog?.also {
+    var warningMessage by remember { mutableStateOf<WarningMessage?>(null) }
+    warningMessage?.also {
         WarningDialog(
             title = it.title ?: stringResource(id = R.string.warning_title),
             contentText = it.msg,
-            onDismissRequest = { isShowingWarningDialog = null }
+            onDismissRequest = { warningMessage = null }
         )
     }
 
-    var isShowingErrorDialog by remember { mutableStateOf<FatalMessage?>(null) }
-    isShowingErrorDialog?.also {
+    var fatalMessage by remember { mutableStateOf<FatalMessage?>(null) }
+    fatalMessage?.also {
         WarningDialog(
             title = it.title,
             contentText = it.msg,
@@ -106,7 +109,12 @@ fun MainStateful(
         )
     }
 
-    HandleBackGesture(drawerState, scope, navController, snackbarHostState)
+    HandleBackGesture(
+        drawerState = drawerState,
+        scope = scope,
+        navController = navController,
+        snackbarHostState = snackbarHostState
+    )
 
     PermissionRequestHandler(
         appEventBus = appEventBus,
@@ -127,28 +135,68 @@ fun MainStateful(
         scope = scope,
         context = context,
         onGoToMap = { uuid -> viewModel.onGoToMap(uuid) },
-        onShowWarningDialog = { isShowingWarningDialog = it }
+        onShowWarningDialog = { warningMessage = it }
     )
 
     HandleGenericMessages(
         genericMessages = appEventBus.genericMessageEvents,
         scope = scope,
         snackbarHostState = snackbarHostState,
-        onShowWarningDialog = { isShowingWarningDialog = it },
-        onShowErrorDialog = { isShowingErrorDialog = it }
+        onShowWarningDialog = { warningMessage = it },
+        onShowErrorDialog = { fatalMessage = it }
     )
 
-    MapArchiveEventHandler(appEventBus, mapArchiveEvents)
+    MapArchiveEventHandler(
+        appEventBus = appEventBus,
+        mapArchiveEvents = mapArchiveEvents
+    )
 
     BillingEventHandler(appEventBus)
 
     val gpsProPurchased by viewModel.gpsProPurchased.collectAsState()
     val menuItems by remember {
         derivedStateOf {
-            if (gpsProPurchased) MenuItem.entries else MenuItem.entries.filter { it != MenuItem.GpsPro }
+            if (gpsProPurchased) {
+                MenuItem.entries
+            } else {
+                MenuItem.entries.filter { it != MenuItem.GpsPro }
+            }
         }
     }
+
     val selectedItem = remember { mutableStateOf(menuItems[0]) }
+    NavigationDrawer(
+        scope = scope,
+        drawerState = drawerState,
+        selectedItem = selectedItem,
+        snackbarHostState = snackbarHostState,
+        navController = navController,
+        menuItems = menuItems,
+        mapsInitializing = mapsInitializing
+    )
+
+    MainActivityLifecycleObserver(viewModel)
+
+}
+
+@Composable
+private fun NavigationDrawer(
+    scope: CoroutineScope,
+    drawerState: DrawerState,
+    selectedItem: MutableState<MenuItem>,
+    snackbarHostState: SnackbarHostState,
+    navController: NavHostController,
+    menuItems: List<MenuItem>,
+    mapsInitializing: Boolean,
+) {
+
+    val onClick: MenuItem.() -> Unit = {
+        scope.launch {
+            drawerState.close()
+        }
+        selectedItem.value = this
+        navController.let(navigateAction)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -159,89 +207,109 @@ fun MainStateful(
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
             ) {
+
                 DrawerHeader()
 
                 menuItems.forEach { item ->
                     NavigationDrawerItem(
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                         icon = {
                             Icon(
-                                painterResource(id = getIconForMenu(item)),
+                                painterResource(id = item.drawableId),
                                 contentDescription = null
                             )
                         },
-                        label = { Text(stringResource(id = getNameForMenu(item))) },
+                        label = { Text(stringResource(id = item.stringId)) },
                         selected = item == selectedItem.value,
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            selectedItem.value = item
-
-                            when (item) {
-                                MenuItem.MapList -> navController.navigateToMapList()
-                                MenuItem.MapCreate -> navController.navigateToMapCreation()
-                                MenuItem.Record -> navController.navigateToRecord()
-                                MenuItem.TrailSearch -> navController.navigateToTrailSearch()
-                                MenuItem.GpsPro -> navController.navigateToGpsPro()
-                                MenuItem.MapImport -> navController.navigateToMapImport()
-                                MenuItem.WifiP2p -> navController.navigateToWifiP2p()
-                                MenuItem.Settings -> navController.navigateToSettings()
-                                MenuItem.Shop -> navController.navigateToShop()
-                                MenuItem.About -> navController.navigateToAbout()
-                            }
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        onClick = { item.onClick() },
                     )
                 }
             }
         },
         content = {
             Box {
-                MainGraph(
-                    navController = navController,
-                    onMainMenuClick = { scope.launch { drawerState.open() } }
-                )
+                if (!LocalInspectionMode.current) {
+                    MainGraph(
+                        navController = navController,
+                        onMainMenuClick = { scope.launch { drawerState.open() } }
+                    )
+                }
                 SnackbarHost(
+                    modifier = Modifier.align(Alignment.BottomCenter),
                     hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
         }
     )
-
-    MainActivityLifecycleObserver(viewModel)
 }
 
-private fun getNameForMenu(menuItem: MenuItem): Int {
-    return when (menuItem) {
-        MenuItem.MapList -> R.string.select_map_menu_title
-        MenuItem.MapCreate -> R.string.create_menu_title
-        MenuItem.Record -> R.string.trails_menu_title
-        MenuItem.TrailSearch -> R.string.trail_search_feature_menu
-        MenuItem.GpsPro -> R.string.gps_plus_menu_title
-        MenuItem.MapImport -> R.string.import_menu_title
-        MenuItem.WifiP2p -> R.string.share_menu_title
-        MenuItem.Settings -> R.string.settings_menu_title
-        MenuItem.Shop -> R.string.shop_menu_title
-        MenuItem.About -> R.string.about
-    }
+@Preview
+@Composable
+private fun NavigationDrawerPreview() {
+    NavigationDrawer(
+        scope = rememberCoroutineScope(),
+        drawerState = rememberDrawerState(DrawerValue.Open),
+        selectedItem = remember { mutableStateOf(MenuItem.MapCreate) },
+        snackbarHostState = remember { SnackbarHostState() },
+        navController = rememberNavController(),
+        menuItems = remember { MenuItem.entries },
+        mapsInitializing = true
+    )
 }
 
-private fun getIconForMenu(menuItem: MenuItem): Int {
-    return when (menuItem) {
-        MenuItem.MapList -> R.drawable.ic_menu_gallery
-        MenuItem.MapCreate -> R.drawable.ic_terrain_black_24dp
-        MenuItem.Record -> R.drawable.folder
-        MenuItem.TrailSearch -> R.drawable.ic_baseline_search_24
-        MenuItem.GpsPro -> R.drawable.satellite_variant
-        MenuItem.MapImport -> R.drawable.import_24dp
-        MenuItem.WifiP2p -> R.drawable.ic_share_black_24dp
-        MenuItem.Settings -> R.drawable.ic_settings_black_24dp
-        MenuItem.Shop -> R.drawable.basket
-        MenuItem.About -> R.drawable.help
-    }
-}
-
-private enum class MenuItem {
-    MapList, MapCreate, Record, TrailSearch, GpsPro, MapImport, WifiP2p, Settings, Shop, About
+private enum class MenuItem(
+    @StringRes val stringId: Int,
+    @DrawableRes val drawableId: Int,
+    val navigateAction: NavHostController.() -> Unit,
+) {
+    MapList(
+        stringId = R.string.select_map_menu_title,
+        drawableId = R.drawable.ic_menu_gallery,
+        navigateAction = NavHostController::navigateToMapList
+    ),
+    MapCreate(
+        stringId = R.string.create_menu_title,
+        drawableId = R.drawable.ic_terrain_black_24dp,
+        navigateAction = NavHostController::navigateToMapCreation
+    ),
+    Record(
+        stringId = R.string.trails_menu_title,
+        drawableId = R.drawable.folder,
+        navigateAction = NavHostController::navigateToRecord
+    ),
+    TrailSearch(
+        stringId = R.string.trail_search_feature_menu,
+        drawableId = R.drawable.ic_baseline_search_24,
+        navigateAction = NavHostController::navigateToTrailSearch
+    ),
+    GpsPro(
+        stringId = R.string.gps_plus_menu_title,
+        drawableId = R.drawable.satellite_variant,
+        navigateAction = NavHostController::navigateToGpsPro
+    ),
+    MapImport(
+        stringId = R.string.import_menu_title,
+        drawableId = R.drawable.import_24dp,
+        navigateAction = NavHostController::navigateToMapImport
+    ),
+    WifiP2p(
+        stringId = R.string.share_menu_title,
+        drawableId = R.drawable.ic_share_black_24dp,
+        navigateAction = NavHostController::navigateToWifiP2p
+    ),
+    Settings(
+        stringId = R.string.settings_menu_title,
+        drawableId = R.drawable.ic_settings_black_24dp,
+        navigateAction = NavHostController::navigateToSettings
+    ),
+    Shop(
+        stringId = R.string.shop_menu_title,
+        drawableId = R.drawable.basket,
+        navigateAction = NavHostController::navigateToShop
+    ),
+    About(
+        stringId = R.string.about,
+        drawableId = R.drawable.help,
+        navigateAction = NavHostController::navigateToAbout
+    ),
 }
