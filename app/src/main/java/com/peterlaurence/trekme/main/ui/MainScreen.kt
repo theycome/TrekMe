@@ -19,7 +19,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -67,7 +66,6 @@ import com.peterlaurence.trekme.main.viewmodel.MainActivityViewModel
 import com.peterlaurence.trekme.main.viewmodel.RecordingEventHandlerViewModel
 import com.peterlaurence.trekme.util.android.activity
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -165,14 +163,24 @@ fun MainStateful(
     }
 
     val selectedItem = remember { mutableStateOf(menuItems[0]) }
+
+    val onMenuItemClick: (MenuItem) -> Unit = {
+        scope.launch {
+            drawerState.close()
+        }
+        selectedItem.value = it
+        navController.let(it.navigateAction)
+    }
+
     NavigationDrawer(
-        scope = scope,
         drawerState = drawerState,
-        selectedItem = selectedItem,
         snackbarHostState = snackbarHostState,
         navController = navController,
         menuItems = menuItems,
-        mapsInitializing = mapsInitializing
+        selectedItem = selectedItem.value,
+        mapsInitializing = mapsInitializing,
+        onMenuItemClick = onMenuItemClick,
+        onMainMenuClick = { scope.launch { drawerState.open() } }
     )
 
     MainActivityLifecycleObserver(viewModel)
@@ -181,22 +189,15 @@ fun MainStateful(
 
 @Composable
 private fun NavigationDrawer(
-    scope: CoroutineScope,
     drawerState: DrawerState,
-    selectedItem: MutableState<MenuItem>,
     snackbarHostState: SnackbarHostState,
     navController: NavHostController,
     menuItems: List<MenuItem>,
+    selectedItem: MenuItem,
     mapsInitializing: Boolean,
+    onMenuItemClick: (MenuItem) -> Unit,
+    onMainMenuClick: () -> Unit,
 ) {
-
-    val onClick: MenuItem.() -> Unit = {
-        scope.launch {
-            drawerState.close()
-        }
-        selectedItem.value = this
-        navController.let(navigateAction)
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -220,8 +221,8 @@ private fun NavigationDrawer(
                             )
                         },
                         label = { Text(stringResource(id = item.stringId)) },
-                        selected = item == selectedItem.value,
-                        onClick = { item.onClick() },
+                        selected = item == selectedItem,
+                        onClick = { onMenuItemClick(item) },
                     )
                 }
             }
@@ -231,7 +232,7 @@ private fun NavigationDrawer(
                 if (!LocalInspectionMode.current) {
                     MainGraph(
                         navController = navController,
-                        onMainMenuClick = { scope.launch { drawerState.open() } }
+                        onMainMenuClick = onMainMenuClick
                     )
                 }
                 SnackbarHost(
@@ -247,13 +248,14 @@ private fun NavigationDrawer(
 @Composable
 private fun NavigationDrawerPreview() {
     NavigationDrawer(
-        scope = rememberCoroutineScope(),
         drawerState = rememberDrawerState(DrawerValue.Open),
-        selectedItem = remember { mutableStateOf(MenuItem.MapCreate) },
         snackbarHostState = remember { SnackbarHostState() },
         navController = rememberNavController(),
-        menuItems = remember { MenuItem.entries },
-        mapsInitializing = true
+        menuItems = MenuItem.entries,
+        selectedItem = MenuItem.MapCreate,
+        mapsInitializing = true,
+        onMenuItemClick = {},
+        onMainMenuClick = {},
     )
 }
 
