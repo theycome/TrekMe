@@ -46,14 +46,14 @@ fun PermissionRequestHandler(
     snackbarHostState: SnackbarHostState,
     scope: CoroutineScope,
 ) {
-    val context = LocalContext.current
 
+    val context = LocalContext.current
     val activity = context.activity
 
     val storagePermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { isGranted: Map<String, @JvmSuppressWildcards Boolean> ->
-        if (isGranted.values.any { !it }) {
+        if (!isGranted.values.all { it }) {
             scope.launch {
                 val result = snackbarHostState.showSnackbar(
                     message = context.getString(R.string.critical_perm_denied),
