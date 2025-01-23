@@ -45,7 +45,7 @@ fun MapDownloadEventHandler(
                     val result = snackbarHostState.showSnackbar(
                         context.getString(R.string.service_download_finished),
                         actionLabel = context.getString(R.string.open_dialog),
-                        isLong = true
+                        isLongDuration = true
                     )
 
                     if (result == SnackbarResult.ActionPerformed) {
@@ -62,7 +62,7 @@ fun MapDownloadEventHandler(
                         context.getString(R.string.service_update_finished)
                     },
                     actionLabel = context.getString(R.string.ok_dialog),
-                    isLong = true
+                    isLongDuration = true
                 )
 
                 if (result == SnackbarResult.ActionPerformed) {

@@ -24,7 +24,10 @@ fun HandleGenericMessages(
         when (message) {
             is StandardMessage -> {
                 scope.launch {
-                    snackbarHostState.showSnackbar(message = message.msg, isLong = message.showLong)
+                    snackbarHostState.showSnackbar(
+                        message = message.msg,
+                        isLongDuration = message.showLong
+                    )
                 }
             }
 

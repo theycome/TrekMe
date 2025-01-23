@@ -57,7 +57,7 @@ fun PermissionRequestHandler(
             scope.launch {
                 val result = snackbarHostState.showSnackbar(
                     message = context.getString(R.string.critical_perm_denied),
-                    isLong = true,
+                    isLongDuration = true,
                     actionLabel = context.getString(R.string.ok_dialog)
                 )
 
