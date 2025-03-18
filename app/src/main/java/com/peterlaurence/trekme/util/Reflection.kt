@@ -12,7 +12,7 @@ package com.peterlaurence.trekme.util
  *     data object Year : MonthAndYear
  * }
  *
- * val list: List<SubscriptionType.MonthAndYear> = nestedClassesInstances<SubscriptionType.MonthAndYear>()
+ * val list: List<SubscriptionType.MonthAndYear> = sealedSubclassesInstances<SubscriptionType.MonthAndYear>()
  * ```
  */
 inline fun <reified T> sealedSubclassesInstances(): List<T> =
