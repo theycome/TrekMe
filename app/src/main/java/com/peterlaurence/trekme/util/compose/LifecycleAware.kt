@@ -5,10 +5,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -18,7 +18,7 @@ fun <T> LaunchedEffectWithLifecycle(
     flow: Flow<T>,
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
-    collector: FlowCollector<T>
+    collector: FlowCollector<T>,
 ) {
     LaunchedEffect(key1 = lifecycle, key2 = flow) {
         lifecycle.repeatOnLifecycle(minActiveState) {
@@ -31,7 +31,7 @@ fun <T> LaunchedEffectWithLifecycle(
 fun <T> LaunchedEffectWithLifecycle(
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
-    block: suspend () -> T
+    block: suspend () -> T,
 ) {
     LaunchedEffect(key1 = lifecycle, key2 = block) {
         lifecycle.repeatOnLifecycle(minActiveState) {
@@ -45,7 +45,7 @@ fun LifeCycleObserver(
     onStart: () -> Unit = {},
     onResume: () -> Unit = {},
     onPause: () -> Unit = {},
-    onStop: () -> Unit = {}
+    onStop: () -> Unit = {},
 ) {
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
 
