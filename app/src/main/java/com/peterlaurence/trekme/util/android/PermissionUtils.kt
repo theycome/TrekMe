@@ -3,10 +3,13 @@ package com.peterlaurence.trekme.util.android
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
@@ -94,3 +97,10 @@ fun Context.isLocationEnabled(): Boolean =
 fun Context.isBatteryOptimized(): Boolean =
     (getSystemService(Context.POWER_SERVICE) as PowerManager)
         .run { isIgnoringBatteryOptimizations(packageName) }
+
+fun Activity.openAppSettings() =
+    with(Intent()) {
+        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        data = Uri.fromParts("package", packageName, null)
+        startActivity(this)
+    }
