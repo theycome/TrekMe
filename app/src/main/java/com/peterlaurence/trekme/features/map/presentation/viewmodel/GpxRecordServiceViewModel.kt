@@ -73,7 +73,7 @@ class GpxRecordServiceViewModel @Inject constructor(
 
     private suspend fun startRecording() {
         /* Check location service. If disabled, no need to go further. */
-        if (!isLocationEnabled(app.applicationContext)) {
+        if (!app.applicationContext.isLocationEnabled()) {
             val msg = WarningMessage(
                 title = app.applicationContext.getString(R.string.warning_title),
                 msg = app.applicationContext.getString(R.string.location_disabled_warning)
@@ -100,7 +100,7 @@ class GpxRecordServiceViewModel @Inject constructor(
         }
 
         /* Check battery optimization, and inform the user if needed */
-        if (isBatteryOptimized(app.applicationContext)) {
+        if (app.applicationContext.isBatteryOptimized()) {
             _events.send(Event.DisableBatteryOptSignal)
             /* Wait for the user to take action before continuing */
             ackBatteryOptSignal.receive()

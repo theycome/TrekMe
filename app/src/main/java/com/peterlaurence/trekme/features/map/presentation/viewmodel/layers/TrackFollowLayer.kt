@@ -128,7 +128,7 @@ class TrackFollowLayer(
 
     private suspend fun checkLocationAndBatteryOpt() {
         /* Check location service. If disabled, no need to go further. */
-        if (!isLocationEnabled(appContext)) {
+        if (!appContext.isLocationEnabled()) {
             val msg = WarningMessage(
                 title = appContext.getString(R.string.warning_title),
                 msg = appContext.getString(R.string.location_disabled_warning)
@@ -138,7 +138,7 @@ class TrackFollowLayer(
         }
 
         /* Check battery optimization, and inform the user if needed */
-        if (isBatteryOptimized(appContext)) {
+        if (appContext.isBatteryOptimized()) {
             _events.send(Event.DisableBatteryOptSignal)
             /* Wait for the user to take action before continuing */
             ackBatteryOptSignal.receive()
