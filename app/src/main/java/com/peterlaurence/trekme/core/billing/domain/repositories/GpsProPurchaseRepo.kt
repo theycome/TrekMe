@@ -25,6 +25,7 @@ class GpsProPurchaseRepo @Inject constructor(
 ) : GpsProStateOwner,
     PurchaseInteractor<SubscriptionType.Single> {
 
+    // TODO - use StateFlowHolder from HabitValue
     private val _purchaseFlow = MutableStateFlow(PurchaseState.CHECK_PENDING)
     override val purchaseFlow = _purchaseFlow.asStateFlow()
 
