@@ -47,7 +47,7 @@ import com.peterlaurence.trekme.main.eventhandler.HandleGenericMessages
 import com.peterlaurence.trekme.main.eventhandler.MapArchiveEventHandler
 import com.peterlaurence.trekme.main.eventhandler.MapDownloadEventHandler
 import com.peterlaurence.trekme.main.eventhandler.RecordingEventHandler
-import com.peterlaurence.trekme.main.permission.PermissionRequestHandler
+import com.peterlaurence.trekme.main.permissions.PermissionRequestHandler
 import com.peterlaurence.trekme.main.ui.component.DrawerHeader
 import com.peterlaurence.trekme.main.ui.component.HandleBackGesture
 import com.peterlaurence.trekme.main.ui.component.MainActivityLifecycleObserver

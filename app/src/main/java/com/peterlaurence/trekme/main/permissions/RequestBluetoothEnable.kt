@@ -1,4 +1,4 @@
-package com.peterlaurence.trekme.main.permission
+package com.peterlaurence.trekme.main.permissions
 
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
