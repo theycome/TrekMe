@@ -37,6 +37,7 @@ import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import com.peterlaurence.trekme.util.compose.LifeCycleObserver
 import com.peterlaurence.trekme.util.compose.showSnackbar
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,21 +53,14 @@ fun PermissionRequestHandler(
         scope = scope
     )
 
+    RequestBluetoothEnable(
+        signalFlow = appEventBus.requestBluetoothEnableFlow,
+        onEnabled = { appEventBus.bluetoothEnabled(true) },
+        onDisabled = { appEventBus.bluetoothEnabled(false) }
+    )
+
     val context = LocalContext.current
     val activity = context.activity
-
-    val bluetoothLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        when (result.resultCode) {
-            Activity.RESULT_OK -> appEventBus.bluetoothEnabled(true)
-            Activity.RESULT_CANCELED -> appEventBus.bluetoothEnabled(false)
-        }
-    }
-
-    LaunchedEffectWithLifecycle(appEventBus.requestBluetoothEnableFlow) {
-        bluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-    }
 
     val requestBtConnectPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -133,24 +127,6 @@ fun PermissionRequestHandler(
     LaunchedEffectWithLifecycle(appEventBus.requestNearbyWifiDevicesPermFlow) {
         requestNearbyWifiPermission(activity)
     }
-}
-
-@Composable
-private fun WarningDialogCaller(
-    @StringRes title: Int = R.string.warning_title,
-    @StringRes content: Int,
-    @StringRes confirmButton: Int = R.string.ok_dialog,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    WarningDialog(
-        title = stringResource(id = title),
-        contentText = stringResource(id = content),
-        confirmButtonText = stringResource(id = confirmButton),
-        dismissButtonText = stringResource(id = R.string.cancel_dialog_string),
-        onConfirmPressed = { onConfirm() },
-        onDismissRequest = { onDismiss() }
-    )
 }
 
 @Composable
@@ -267,6 +243,46 @@ private fun RequestMinimalPermissions(
         onStart = { requestMinimalPermissions() }
     )
 
+}
+
+@Composable
+private fun RequestBluetoothEnable(
+    signalFlow: SharedFlow<Unit>,
+    onEnabled: () -> Unit,
+    onDisabled: () -> Unit,
+) {
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        when (result.resultCode) {
+            Activity.RESULT_OK -> onEnabled()
+            Activity.RESULT_CANCELED -> onDisabled()
+        }
+    }
+
+    LaunchedEffectWithLifecycle(signalFlow) {
+        launcher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+    }
+
+}
+
+@Composable
+private fun WarningDialogCaller(
+    @StringRes title: Int = R.string.warning_title,
+    @StringRes content: Int,
+    @StringRes confirmButton: Int = R.string.ok_dialog,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    WarningDialog(
+        title = stringResource(id = title),
+        contentText = stringResource(id = content),
+        confirmButtonText = stringResource(id = confirmButton),
+        dismissButtonText = stringResource(id = R.string.cancel_dialog_string),
+        onConfirmPressed = { onConfirm() },
+        onDismissRequest = { onDismiss() }
+    )
 }
 
 private fun Activity.openAppSettings() =
