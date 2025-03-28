@@ -1,29 +1,17 @@
 package com.peterlaurence.trekme.main.permissions
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.neverEqualPolicy
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.peterlaurence.trekme.R
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.events.gpspro.GpsProEvents
 import com.peterlaurence.trekme.features.common.presentation.ui.dialogs.WarningDialog
-import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.LocationRationale
 import com.peterlaurence.trekme.util.android.activity
 import com.peterlaurence.trekme.util.android.requestNearbyWifiPermission
 import com.peterlaurence.trekme.util.android.requestNotificationPermission
-import com.peterlaurence.trekme.util.android.shouldShowBackgroundLocPermRationale
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -47,58 +35,18 @@ fun PermissionRequestHandler(
         onDisabled = { appEventBus.bluetoothEnabled(false) }
     )
 
-    RequestBluetoothConnectPermission(gpsProEvents.requestBluetoothPermissionFlow) {
-        gpsProEvents.postBluetoothPermissionResult(it)
-    }
-    
-    val context = LocalContext.current
-    val activity = context.activity
-
-    var isShowingBackgroundLocationRationale by rememberSaveable {
-        mutableStateOf<AppEventBus.BackgroundLocationRequest?>(
-            null
-        )
+    RequestBluetoothConnect(gpsProEvents.requestBluetoothPermissionFlow) { granted ->
+        gpsProEvents.postBluetoothPermissionResult(granted)
     }
 
-    var backgroundLocationRequest: AppEventBus.BackgroundLocationRequest? by remember {
-        mutableStateOf(
-            null,
-            policy = neverEqualPolicy()
-        )
-    }
-    val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    RequestBackgroundLocation(appEventBus.requestBackgroundLocationSignal) { granted ->
         scope.launch {
             appEventBus.backgroundLocationResult.send(granted)
         }
     }
 
-    LaunchedEffectWithLifecycle(appEventBus.requestBackgroundLocationSignal) { request ->
-        if (Build.VERSION.SDK_INT < 29) return@LaunchedEffectWithLifecycle
-        backgroundLocationRequest = request
-        if (shouldShowBackgroundLocPermRationale(activity)) {
-            isShowingBackgroundLocationRationale = request
-        } else {
-            backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
-    }
-
-    isShowingBackgroundLocationRationale?.also { request ->
-        LocationRationale(
-            text = context.getString(request.rationaleId),
-            onConfirm = {
-                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                isShowingBackgroundLocationRationale = null
-            },
-            onIgnore = {
-                scope.launch {
-                    appEventBus.backgroundLocationResult.send(false)
-                }
-                isShowingBackgroundLocationRationale = null
-            },
-        )
-    }
+    // TODO - HERE
+    val activity = LocalContext.current.activity
 
     LaunchedEffectWithLifecycle(appEventBus.requestNotificationPermFlow) {
         requestNotificationPermission(activity)

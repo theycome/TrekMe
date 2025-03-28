@@ -37,17 +37,6 @@ fun isBackgroundLocationGranted(appContext: Context): Boolean {
     return permissionLocation == PackageManager.PERMISSION_GRANTED
 }
 
-fun shouldShowBackgroundLocPermRationale(activity: Activity): Boolean {
-    return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-        false
-    } else {
-        ActivityCompat.shouldShowRequestPermissionRationale(
-            activity,
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION
-        )
-    }
-}
-
 fun requestNotificationPermission(activity: Activity) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
     val permission = ActivityCompat.checkSelfPermission(
@@ -78,14 +67,14 @@ fun requestNearbyWifiPermission(activity: Activity) {
     }
 }
 
+/**
+ * prefix with `is` to avoid name clash with Activity's `shouldShowRequestPermissionRationale`
+ */
+fun Activity.isShowRequestPermissionRationale(permission: String): Boolean =
+    ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
+
 fun Context.hasPermission(permission: String): Boolean =
     ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-
-fun Context.hasPermissions(permissions: List<String>): Boolean =
-    permissions.all(::hasPermission)
-
-fun Context.hasAnyOfPermissions(permissions: List<String>): Boolean =
-    permissions.any(::hasPermission)
 
 fun Context.hasPermissions(vararg permissions: String): Boolean =
     permissions.all(::hasPermission)

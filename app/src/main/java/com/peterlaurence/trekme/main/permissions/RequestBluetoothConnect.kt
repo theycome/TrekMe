@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
  * Created by Ivan Yakushev on 27.03.2025
  */
 @Composable
-fun RequestBluetoothConnectPermission(
+fun RequestBluetoothConnect(
     signalFlow: SharedFlow<Unit>,
     onResult: (Boolean) -> Unit,
 ) {
