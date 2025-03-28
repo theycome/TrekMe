@@ -47,20 +47,12 @@ fun PermissionRequestHandler(
         onDisabled = { appEventBus.bluetoothEnabled(false) }
     )
 
+    RequestBluetoothConnectPermission(gpsProEvents.requestBluetoothPermissionFlow) {
+        gpsProEvents.postBluetoothPermissionResult(it)
+    }
+    
     val context = LocalContext.current
     val activity = context.activity
-
-    val requestBtConnectPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        gpsProEvents.postBluetoothPermissionResult(granted)
-    }
-
-    LaunchedEffectWithLifecycle(gpsProEvents.requestBluetoothPermissionFlow) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            requestBtConnectPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-    }
 
     var isShowingBackgroundLocationRationale by rememberSaveable {
         mutableStateOf<AppEventBus.BackgroundLocationRequest?>(
