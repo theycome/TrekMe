@@ -82,7 +82,7 @@ class GpxRecordServiceViewModel @Inject constructor(
             return
         }
 
-        if (!isBackgroundLocationGranted(app.applicationContext)) {
+        if (!app.applicationContext.isBackgroundLocationGranted()) {
             val request =
                 AppEventBus.BackgroundLocationRequest(R.string.background_location_rationale_gpx_recording)
             appEventBus.requestBackgroundLocation(request)

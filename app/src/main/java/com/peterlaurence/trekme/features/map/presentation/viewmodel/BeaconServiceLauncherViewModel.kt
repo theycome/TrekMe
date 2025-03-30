@@ -29,7 +29,7 @@ class BeaconServiceLauncherViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             mapFeatureEvents.hasBeaconsFlow.collectLatest {
-                if (!isBackgroundLocationGranted(appContext)) {
+                if (!appContext.isBackgroundLocationGranted()) {
                     val request = AppEventBus.BackgroundLocationRequest(
                         R.string.beacon_background_loc_perm,
                     )

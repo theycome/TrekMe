@@ -146,7 +146,7 @@ class TrackFollowLayer(
     }
 
     private suspend fun checkBackgroundLocationPerm(): Boolean {
-        return if (!isBackgroundLocationGranted(appContext)) {
+        return if (!appContext.isBackgroundLocationGranted()) {
             val request = AppEventBus.BackgroundLocationRequest(
                 R.string.background_location_rationale_track_follow
             )
