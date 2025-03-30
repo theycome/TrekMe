@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -12,8 +13,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import com.peterlaurence.trekme.R
-import com.peterlaurence.trekme.util.android.MIN_PERMISSIONS_ANDROID_9_AND_BELOW
+import com.peterlaurence.trekme.features.common.presentation.ui.dialogs.WarningDialog
 import com.peterlaurence.trekme.util.android.activity
 import com.peterlaurence.trekme.util.android.hasPermission
 import com.peterlaurence.trekme.util.android.hasPermissions
@@ -63,7 +65,7 @@ fun RequestMinimalPermissions(
     fun requestMinimalPermissions() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             /* We absolutely need storage and location perm under Android 10 */
-            if (!context.hasPermissions(*MIN_PERMISSIONS_ANDROID_9_AND_BELOW)) {
+            if (!context.hasPermissions(*MINIMAL_PERMISSIONS)) {
                 locationAndStorageRationale = true
             }
         } else {
@@ -90,7 +92,7 @@ private fun RequestLocationAndStorage(
     val context = LocalContext.current
     val activity = context.activity
 
-    val permissionLauncher = rememberLauncherForActivityResult(
+    val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grantedMap: Map<String, @JvmSuppressWildcards Boolean> ->
         if (!grantedMap.values.all { it }) {
@@ -108,16 +110,15 @@ private fun RequestLocationAndStorage(
         }
     }
 
+    val invokeLauncherAndCancelRationale = {
+        launcher.launch(MINIMAL_PERMISSIONS)
+        cancelRationaleBlock()
+    }
+
     WarningDialogCaller(
         content = R.string.no_storage_perm,
-        onConfirm = {
-            cancelRationaleBlock()
-            permissionLauncher.launch(MIN_PERMISSIONS_ANDROID_9_AND_BELOW)
-        },
-        onDismiss = {
-            cancelRationaleBlock()
-            permissionLauncher.launch(MIN_PERMISSIONS_ANDROID_9_AND_BELOW)
-        }
+        onConfirm = { invokeLauncherAndCancelRationale() },
+        onDismiss = { invokeLauncherAndCancelRationale() }
     )
 
 }
@@ -141,3 +142,27 @@ private fun RequestLocation(
     )
 
 }
+
+@Composable
+private fun WarningDialogCaller(
+    @StringRes title: Int = R.string.warning_title,
+    @StringRes content: Int,
+    @StringRes confirmButton: Int = R.string.ok_dialog,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    WarningDialog(
+        title = stringResource(id = title),
+        contentText = stringResource(id = content),
+        confirmButtonText = stringResource(id = confirmButton),
+        dismissButtonText = stringResource(id = R.string.cancel_dialog_string),
+        onConfirmPressed = { onConfirm() },
+        onDismissRequest = { onDismiss() }
+    )
+}
+
+private val MINIMAL_PERMISSIONS = arrayOf(
+    Manifest.permission.READ_EXTERNAL_STORAGE,
+    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+    Manifest.permission.ACCESS_FINE_LOCATION,
+)
