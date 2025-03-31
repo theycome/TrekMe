@@ -2,8 +2,6 @@ package com.peterlaurence.trekme.main.permissions
 
 import android.Manifest
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
@@ -19,14 +17,12 @@ fun RequestBluetoothConnect(
 
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        onResult(granted)
-    }
+    val launcher = SinglePermissionLauncher(
+        Manifest.permission.BLUETOOTH_CONNECT
+    ) { onResult(it) }
 
     LaunchedEffectWithLifecycle(signalFlow) {
-        launcher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        launcher()
     }
 
 }

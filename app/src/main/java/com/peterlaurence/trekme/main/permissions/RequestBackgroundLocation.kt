@@ -2,8 +2,6 @@ package com.peterlaurence.trekme.main.permissions
 
 import android.Manifest
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,7 +11,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.features.record.presentation.ui.components.dialogs.LocationRationale
 import com.peterlaurence.trekme.util.android.activity
-import com.peterlaurence.trekme.util.android.isShowRequestPermissionRationale
 import com.peterlaurence.trekme.util.compose.LaunchedEffectWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -29,34 +26,29 @@ fun RequestBackgroundLocation(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
 
     val context = LocalContext.current
-    val permissionId = Manifest.permission.ACCESS_BACKGROUND_LOCATION
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        onPermissionRequestResult(granted)
-    }
-
-    val invokeLauncher = { launcher.launch(permissionId) }
+    val launcher = SinglePermissionLauncher(
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+    ) { onPermissionRequestResult(it) }
 
     var locationRequest: AppEventBus.BackgroundLocationRequest? by rememberSaveable {
         mutableStateOf(null)
     }
-    
+
     locationRequest?.apply {
         LocationRationale(
             text = context.getString(rationaleId),
-            onConfirm = { invokeLauncher() },
+            onConfirm = { launcher() },
             onIgnore = { onPermissionRequestResult(false) },
         )
         locationRequest = null
     }
 
     LaunchedEffectWithLifecycle(signalFlow) {
-        if (context.activity.isShowRequestPermissionRationale(permissionId)) {
+        if (launcher.isShowRequestPermissionRationale(context.activity)) {
             locationRequest = it
         } else {
-            invokeLauncher()
+            launcher()
         }
     }
 
