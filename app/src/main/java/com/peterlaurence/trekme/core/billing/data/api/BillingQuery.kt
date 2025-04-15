@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
-import arrow.core.raise.Raise
+import arrow.core.Either
+import arrow.core.raise.either
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
@@ -25,47 +26,31 @@ class BillingQuery(
     private val purchaseIds: PurchaseIdsContract,
 ) {
 
-    context(Raise<CallbackFlowFailure>)
-    suspend fun queryPurchase(type: PurchaseType): Purchase? =
-        queryPurchasesResult(type)
+    suspend fun queryPurchase(type: PurchaseType): Either<CallbackFlowFailure, Purchase?> = either {
+        queryPurchasesResult(type).bind()
             .getPurchase(type, purchaseIds)
-
-    context(Raise<CallbackFlowFailure>)
-    suspend fun queryPurchasesResult(type: PurchaseType): PurchasesResult {
-
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(type.productType)
-            .build()
-
-        return callbackFlowWrapper { emit ->
-            billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
-                emit {
-                    PurchasesResult(billingResult, purchases)
-                }
-            }
-        }()
     }
 
-    context(Raise<CallbackFlowFailure>)
-    suspend fun queryProductDetailsResult(subId: String): ProductDetailsResult {
+    suspend fun queryProductDetailsResult(subId: String): Either<CallbackFlowFailure, ProductDetailsResult> =
+        either {
 
-        val product = QueryProductDetailsParams.Product.newBuilder()
-            .setProductId(subId)
-            .setProductType(BillingClient.ProductType.SUBS)
-            .build()
+            val product = QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(subId)
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
 
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(listOf(product))
-            .build()
+            val params = QueryProductDetailsParams.newBuilder()
+                .setProductList(listOf(product))
+                .build()
 
-        return callbackFlowWrapper { emit ->
-            billingClient.queryProductDetailsAsync(params) { billingResult, productDetails ->
-                emit {
-                    ProductDetailsResult(billingResult, productDetails)
+            callbackFlowWrapper { emit ->
+                billingClient.queryProductDetailsAsync(params) { billingResult, productDetails ->
+                    emit {
+                        ProductDetailsResult(billingResult, productDetails)
+                    }
                 }
-            }
-        }()
-    }
+            }()
+        }
 
     fun acknowledgePurchase(
         purchase: Purchase,
@@ -87,5 +72,21 @@ class BillingQuery(
             log("Consumed the purchase. It can now be bought again.")
         }
     }
+
+    suspend fun queryPurchasesResult(type: PurchaseType): Either<CallbackFlowFailure, PurchasesResult> =
+        either {
+
+            val params = QueryPurchasesParams.newBuilder()
+                .setProductType(type.productType)
+                .build()
+
+            callbackFlowWrapper { emit ->
+                billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
+                    emit {
+                        PurchasesResult(billingResult, purchases)
+                    }
+                }
+            }()
+        }
 
 }

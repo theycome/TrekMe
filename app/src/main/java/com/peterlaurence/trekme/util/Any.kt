@@ -3,6 +3,7 @@ package com.peterlaurence.trekme.util
 import android.util.Log
 import arrow.core.raise.Raise
 import arrow.core.raise.RaiseDSL
+import arrow.core.raise.fold
 import arrow.core.raise.recover
 
 /**
@@ -17,7 +18,6 @@ fun Any.logCallStack(objekt: Any) {
 }
 
 /**
- * Calls recover
  * - on failure - logs call stack and returns null
  */
 @RaiseDSL
@@ -27,3 +27,18 @@ inline fun <Error : Any, A> Any.recoverLogged(
     logCallStack(it)
     null
 }
+
+/**
+ * on recover - logs call stack and returns null
+ */
+@RaiseDSL
+inline fun <Error : Any, A> Any.foldLogged(
+    block: Raise<Error>.() -> A,
+): A? = fold(
+    block = block,
+    recover = {
+        logCallStack(it)
+        null
+    },
+    transform = { it }
+)

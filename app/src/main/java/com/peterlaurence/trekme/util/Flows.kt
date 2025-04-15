@@ -8,6 +8,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
 import arrow.core.raise.Raise
+import arrow.core.raise.ensure
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
@@ -89,7 +90,7 @@ private class MappedStateFlow<T, R>(
 
 
 @Composable
-fun <T> launchFlowCollectionWithLifecycle(
+fun <T> LaunchFlowCollectionWithLifecycle(
     flow: Flow<T>,
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
     minActiveState: Lifecycle.State = Lifecycle.State.RESUMED,
@@ -129,9 +130,10 @@ fun <T> launchFlowCollectionWithLifecycle(
  * was not performed exactly once by the client,
  * raises [CallbackFlowFailure]
  */
-context(Raise<CallbackFlowFailure>)
-suspend fun <R> callbackFlowWrapper(block: ((R) -> Unit) -> Unit): R {
+suspend fun <R> Raise<CallbackFlowFailure>.callbackFlowWrapper(block: ((R) -> Unit) -> Unit): R {
+
     var sendCallCount = 0
+
     val result = callbackFlow {
         runCatching {
             block {
@@ -143,7 +145,11 @@ suspend fun <R> callbackFlowWrapper(block: ((R) -> Unit) -> Unit): R {
         }
         awaitClose { /* We can't do anything, but it doesn't matter */ }
     }.firstOrNull() ?: raise(CallbackFlowFailure.NoElements)
-    if (sendCallCount != 1) raise(CallbackFlowFailure.MultipleElementsEmitted(sendCallCount))
+
+    ensure(sendCallCount == 1) {
+        CallbackFlowFailure.MultipleElementsEmitted(sendCallCount)
+    }
+
     return result
 }
 

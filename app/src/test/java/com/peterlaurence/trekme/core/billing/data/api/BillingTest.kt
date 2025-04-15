@@ -1,5 +1,6 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
+import arrow.core.right
 import com.android.billingclient.api.Purchase
 import com.peterlaurence.trekme.core.billing.data.api.components.AnnualWithGracePeriodVerifier
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
@@ -15,7 +16,6 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
@@ -33,6 +33,10 @@ class BillingTest {
     private val billingMock: Billing<SubscriptionType.Single> = mock()
 
     private val purchaseValidOneTimeMock: Purchase = mock<Purchase>().apply {
+        whenever(purchaseTime).thenReturn(0)
+    }
+
+    private val purchaseValidSubMock: Purchase = mock<Purchase>().apply {
         whenever(purchaseTime).thenReturn(0)
     }
 
@@ -65,15 +69,12 @@ class BillingTest {
 
             billingMock.injectMock<BillingQuery, _>("query") {
                 whenever(
-                    this::queryPurchase.invoke(
-                        anyOrNull(),
+                    queryPurchase(
                         argThat {
                             this == PurchaseType.VALID_ONE_TIME
                         })
-                ).thenReturn(purchaseValidOneTimeMock)
+                ).thenReturn(purchaseValidOneTimeMock.right())
             }
-
-            val purchaseVerifierSpy = spy(purchaseVerifier)
 
             billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase() // invoke tested method
 
@@ -87,40 +88,47 @@ class BillingTest {
     fun `queryWhetherWeHavePurchasesAndConsumeOneTimePurchase path VALID_ONE_TIME is null`() =
         runTest {
 
+            /**
+             * when calling queryPurchase(PurchaseType.VALID_ONE_TIME) -> return null
+             * when calling queryPurchase(PurchaseType.VALID_SUB) -> return mock
+             */
+            // when calling queryPurchase(PurchaseType.VALID_ONE_TIME) -> return null
             val queryMock = billingMock.injectMock<BillingQuery, _>("query") {
                 whenever(
-                    this::queryPurchase.invoke(
-                        anyOrNull(),
+                    queryPurchase(
                         argThat {
                             this == PurchaseType.VALID_ONE_TIME
                         })
-                ).thenReturn(null)
+                ).thenReturn(null.right())
+
+                whenever(
+                    queryPurchase(
+                        argThat {
+                            this == PurchaseType.VALID_SUB
+                        })
+                ).thenReturn(purchaseValidSubMock.right())
             }
 
             billingMock.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase() // invoke tested method
 
             verify(queryMock, times(2))::queryPurchase.invoke(
-                anyOrNull(),
                 anyOrNull()
             )
 
             inOrder(queryMock) {
-
                 verify(queryMock)::queryPurchase.invoke(
-                    anyOrNull(),
                     argThat {
                         this == PurchaseType.VALID_ONE_TIME
                     }
                 )
 
                 verify(queryMock)::queryPurchase.invoke(
-                    anyOrNull(),
                     argThat {
                         this == PurchaseType.VALID_SUB
                     }
                 )
-
             }
+
         }
 
 }

@@ -2,6 +2,7 @@ package com.peterlaurence.trekme.core.billing.domain.repositories.interactors
 
 import arrow.core.mapOrAccumulate
 import arrow.core.raise.Raise
+import arrow.core.raise.ensureNotNull
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 
@@ -49,10 +50,9 @@ class SubscriptionInteractor<T : SubscriptionType>(
         }
     }
 
-    context(Raise<GetSubscriptionTypeFailure<T>>)
-    private fun checkInteractor(type: T) {
-        if (providersMap[type] == null) {
-            raise(GetSubscriptionTypeFailure.TypeNotFoundInMap(type))
+    private fun Raise<GetSubscriptionTypeFailure<T>>.checkInteractor(type: T) {
+        ensureNotNull(providersMap[type]) {
+            GetSubscriptionTypeFailure.TypeNotFoundInMap(type)
         }
     }
 

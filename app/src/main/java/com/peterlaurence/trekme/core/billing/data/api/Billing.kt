@@ -1,8 +1,10 @@
 package com.peterlaurence.trekme.core.billing.data.api
 
 import android.app.Application
-import arrow.core.raise.Raise
-import arrow.core.raise.recover
+import arrow.core.Either
+import arrow.core.getOrElse
+import arrow.core.raise.either
+import arrow.core.raise.ensure
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
@@ -30,7 +32,7 @@ import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetails
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseVerifier
 import com.peterlaurence.trekme.events.AppEventBus
 import com.peterlaurence.trekme.util.datetime.millis
-import com.peterlaurence.trekme.util.recoverLogged
+import com.peterlaurence.trekme.util.foldLogged
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -95,14 +97,14 @@ class Billing<in T : SubscriptionType>(
     override suspend fun queryAndAcknowledgePurchases(): Boolean {
         if (!connect()) return false
 
-        val oneTimeAcknowledged = recoverLogged {
-            query.queryPurchase(PurchaseType.ONE_TIME)
-                ?.assureAcknowledgement(acknowledgePurchaseFunctor)
+        val oneTimeAcknowledged = foldLogged {
+            query.queryPurchase(PurchaseType.ONE_TIME).bind()
+                ?.assureAcknowledgement(acknowledgePurchaseFunctor)?.bind()
         } ?: false
 
-        val subAcknowledged = recoverLogged {
-            query.queryPurchase(PurchaseType.SUB)
-                ?.assureAcknowledgement(acknowledgePurchaseFunctor)
+        val subAcknowledged = foldLogged {
+            query.queryPurchase(PurchaseType.SUB).bind()
+                ?.assureAcknowledgement(acknowledgePurchaseFunctor)?.bind()
         } ?: false
 
         return oneTimeAcknowledged || subAcknowledged
@@ -111,14 +113,14 @@ class Billing<in T : SubscriptionType>(
     override suspend fun queryWhetherWeHavePurchasesAndConsumeOneTimePurchase(): Boolean {
         if (!connect()) return false
 
-        val oneTime = recoverLogged {
-            query.queryPurchase(PurchaseType.VALID_ONE_TIME)
+        val oneTime = foldLogged {
+            query.queryPurchase(PurchaseType.VALID_ONE_TIME).bind()
         }
 
         return when (oneTime) {
             null -> {
-                recoverLogged {
-                    query.queryPurchase(PurchaseType.VALID_SUB)
+                foldLogged {
+                    query.queryPurchase(PurchaseType.VALID_SUB).bind()
                 } != null
             }
 
@@ -140,24 +142,23 @@ class Billing<in T : SubscriptionType>(
     /**
      * Get the details of a subscription.
      */
-    context(Raise<GetSubscriptionDetailsFailure>)
-    override suspend fun getSubscriptionDetails(subscriptionType: T): SubscriptionDetails {
+    override suspend fun getSubscriptionDetails(
+        subscriptionType: T,
+    ): Either<GetSubscriptionDetailsFailure, SubscriptionDetails> = either {
 
-        if (!connect()) {
-            raise(GetSubscriptionDetailsFailure.UnableToConnectToBilling)
+        ensure(connect()) {
+            GetSubscriptionDetailsFailure.UnableToConnectToBilling
         }
 
         val subId = purchaseIdsResolver(subscriptionType)
-        val result = recover({
-            query.queryProductDetailsResult(subId)
-        }) {
+        val result = query.queryProductDetailsResult(subId).getOrElse {
             raise(GetSubscriptionDetailsFailure.InCallbackFlow(it))
         }
 
-        return when (result.billingResult.responseCode) {
+        when (result.billingResult.responseCode) {
             OK -> {
                 result.getDetailsById(subId)?.let { productDetails ->
-                    productDetails.toSubscriptionDetails().also {
+                    productDetails.toSubscriptionDetails().bind().also {
                         subscriptionToProductMap[it] = productDetails
                     }
                 } ?: raise(GetSubscriptionDetailsFailure.ProductNotFound(subId))

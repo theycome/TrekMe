@@ -1,36 +1,37 @@
 package com.peterlaurence.trekme.util.ext
 
-import arrow.core.raise.Raise
+import arrow.core.Either
+import arrow.core.raise.either
 
 /**
  * Created by Ivan Yakushev on 29.09.2024
  */
-context(Raise<OperationOnLongFailure>)
-@Suppress("ComplexCondition")
-fun Long.plusSafe(other: Long, allowableRange: LongRange): Long {
-    val res = this.plus(other)
+@Suppress("ComplexCondition", "Ensure")
+fun Long.plusSafe(other: Long, allowableRange: LongRange): Either<OperationOnLongFailure, Long> =
+    either {
+        val res = this@plusSafe.plus(other)
 
-    if (this > 0 && other > 0 && (res < 0 || res !in allowableRange)) {
-        raise(OperationOnLongFailure.OVERFLOW)
-    } else if (this < 0 && other < 0 && (res > 0 || res !in allowableRange)) {
-        raise(OperationOnLongFailure.UNDERFLOW)
+        if (this@plusSafe > 0 && other > 0 && (res < 0 || res !in allowableRange)) {
+            raise(OperationOnLongFailure.OVERFLOW)
+        } else if (this@plusSafe < 0 && other < 0 && (res > 0 || res !in allowableRange)) {
+            raise(OperationOnLongFailure.UNDERFLOW)
+        }
+
+        res
     }
 
-    return res
-}
+@Suppress("ComplexCondition", "Ensure")
+fun Long.minusSafe(other: Long, allowableRange: LongRange): Either<OperationOnLongFailure, Long> =
+    either {
+        val res = this@minusSafe.minus(other)
 
-context(Raise<OperationOnLongFailure>)
-@Suppress("ComplexCondition")
-fun Long.minusSafe(other: Long, allowableRange: LongRange): Long {
-    val res = this.minus(other)
+        if (this@minusSafe > 0 && other < 0 && (res < 0 || res !in allowableRange)) {
+            raise(OperationOnLongFailure.OVERFLOW)
+        } else if (this@minusSafe < 0 && other > 0 && (res > 0 || res !in allowableRange)) {
+            raise(OperationOnLongFailure.UNDERFLOW)
+        }
 
-    if (this > 0 && other < 0 && (res < 0 || res !in allowableRange)) {
-        raise(OperationOnLongFailure.OVERFLOW)
-    } else if (this < 0 && other > 0 && (res > 0 || res !in allowableRange)) {
-        raise(OperationOnLongFailure.UNDERFLOW)
+        res
     }
-
-    return res
-}
 
 enum class OperationOnLongFailure { OVERFLOW, UNDERFLOW }

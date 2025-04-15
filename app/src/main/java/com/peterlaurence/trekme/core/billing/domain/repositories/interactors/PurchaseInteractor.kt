@@ -4,7 +4,7 @@ import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.domain.api.BillingApi
 import com.peterlaurence.trekme.core.billing.domain.model.PurchaseState
-import com.peterlaurence.trekme.util.recoverLogged
+import com.peterlaurence.trekme.util.foldLogged
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -38,13 +38,16 @@ interface PurchaseInteractor<T : SubscriptionType> {
     }
 
     suspend fun updatePurchaseState() {
-        val state = if (billing.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase()) {
-            PurchaseState.PURCHASED
-        } else {
-            querySubscriptions()
-            PurchaseState.NOT_PURCHASED
-        }
-        onUpdatePurchaseState(state)
+        when {
+            billing.queryWhetherWeHavePurchasesAndConsumeOneTimePurchase() -> {
+                PurchaseState.PURCHASED
+            }
+
+            else -> {
+                querySubscriptions()
+                PurchaseState.NOT_PURCHASED
+            }
+        }.let(::onUpdatePurchaseState.invoke())
     }
 
     private fun passDownPurchaseAcknowledgedEvent() {
@@ -81,9 +84,9 @@ interface PurchaseInteractor<T : SubscriptionType> {
         subscriptionInteractor.types.forEach { type ->
             subscriptionInteractor(type) { interactor ->
                 scope.launch {
-                    recoverLogged {
+                    foldLogged {
 
-                        val subscriptionDetails = billing.getSubscriptionDetails(type)
+                        val subscriptionDetails = billing.getSubscriptionDetails(type).bind()
                         interactor.consumer(subscriptionDetails)
 
                     }

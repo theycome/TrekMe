@@ -77,8 +77,8 @@ import com.peterlaurence.trekme.features.common.presentation.ui.theme.TrekMeThem
 import com.peterlaurence.trekme.features.map.presentation.ui.components.ColorIndicator
 import com.peterlaurence.trekme.features.map.presentation.ui.components.ColorPicker
 import com.peterlaurence.trekme.features.map.presentation.viewmodel.TracksManageViewModel
+import com.peterlaurence.trekme.util.LaunchFlowCollectionWithLifecycle
 import com.peterlaurence.trekme.util.compose.SwipeToDismiss
-import com.peterlaurence.trekme.util.launchFlowCollectionWithLifecycle
 import com.peterlaurence.trekme.util.parseColorL
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -128,7 +128,7 @@ fun TracksManageStateful(
     val errorMsg = stringResource(id = R.string.gpx_import_error_msg)
     val outOfBoundsMsg = stringResource(id = R.string.import_result_out_of_bounds)
     val resultRecap = stringResource(id = R.string.import_result_recap)
-    launchFlowCollectionWithLifecycle(viewModel.routeImportEventFlow) { result ->
+    LaunchFlowCollectionWithLifecycle(viewModel.routeImportEventFlow) { result ->
         when (result) {
             is GeoRecordImportResult.GeoRecordImportOk -> {
                 snackbarHostState.showSnackbar(

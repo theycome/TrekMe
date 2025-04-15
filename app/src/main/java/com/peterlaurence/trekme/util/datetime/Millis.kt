@@ -1,7 +1,7 @@
 package com.peterlaurence.trekme.util.datetime
 
 import android.text.format.DateUtils
-import arrow.core.raise.recover
+import arrow.core.getOrElse
 import com.peterlaurence.trekme.util.ext.OperationOnLongFailure
 import com.peterlaurence.trekme.util.ext.minusSafe
 import com.peterlaurence.trekme.util.ext.plusSafe
@@ -25,7 +25,7 @@ value class Millis(val long: Long) {
         val a = long
         val b = rhs.long
 
-        return recover({ a.plusSafe(b, allowableRange) }) {
+        return a.plusSafe(b, allowableRange).getOrElse {
             when (it) {
                 OperationOnLongFailure.OVERFLOW -> error("Overflow when performing $a plus $b")
                 OperationOnLongFailure.UNDERFLOW -> error("Underflow when performing $a plus $b")
@@ -39,7 +39,7 @@ value class Millis(val long: Long) {
         val a = long
         val b = rhs.long
 
-        return recover({ a.minusSafe(b, allowableRange) }) {
+        return a.minusSafe(b, allowableRange).getOrElse {
             when (it) {
                 OperationOnLongFailure.OVERFLOW -> error("Overflow when performing $a minus $b")
                 OperationOnLongFailure.UNDERFLOW -> error("Underflow when performing $a minus $b")

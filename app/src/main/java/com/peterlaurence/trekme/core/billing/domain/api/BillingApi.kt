@@ -1,6 +1,6 @@
 package com.peterlaurence.trekme.core.billing.domain.api
 
-import arrow.core.raise.Raise
+import arrow.core.Either
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionDetails
 import com.peterlaurence.trekme.core.billing.data.model.SubscriptionType
 import com.peterlaurence.trekme.core.billing.domain.model.GetSubscriptionDetailsFailure
@@ -14,8 +14,7 @@ interface BillingApi<in T : SubscriptionType> {
 
     suspend fun queryAndAcknowledgePurchases(): Boolean
 
-    context(Raise<GetSubscriptionDetailsFailure>)
-    suspend fun getSubscriptionDetails(subscriptionType: T): SubscriptionDetails
+    suspend fun getSubscriptionDetails(subscriptionType: T): Either<GetSubscriptionDetailsFailure, SubscriptionDetails>
 
     fun launchBilling(subscription: SubscriptionDetails, onPurchasePending: () -> Unit)
 

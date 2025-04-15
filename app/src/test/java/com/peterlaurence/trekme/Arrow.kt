@@ -2,6 +2,7 @@ package com.peterlaurence.trekme
 
 import arrow.core.raise.Raise
 import arrow.core.raise.RaiseDSL
+import arrow.core.raise.fold
 import arrow.core.raise.recover
 
 /**
@@ -14,3 +15,15 @@ inline fun <Error : Any, A> recoverAssertHappyPath(
     shouldNotHappen()
     null
 }
+
+@RaiseDSL
+inline fun <Error : Any, A> foldAssertHappyPath(
+    block: Raise<Error>.() -> A,
+): A? = fold(
+    block = block,
+    recover = {
+        shouldNotHappen()
+        null
+    },
+    transform = { it }
+)

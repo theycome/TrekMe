@@ -12,7 +12,7 @@ import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsContract
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsMonthYear
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseIdsSingle
 import com.peterlaurence.trekme.core.billing.data.model.PurchaseType
-import com.peterlaurence.trekme.recoverAssertHappyPath
+import com.peterlaurence.trekme.foldAssertHappyPath
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
@@ -161,10 +161,13 @@ class BillingQueryTest {
                     }.`when`(billingClientMock)
                         .queryPurchasesAsync(queryPurchasesParamsCaptor.capture(), any())
 
-                    // invoke BillingQuery.queryPurchase()
-                    // assert whether the correct Purchase is returned
-                    recoverAssertHappyPath {
-                        query.queryPurchasesResult(purchaseType).purchases shouldContain purchase
+                    /**
+                     * invoke BillingQuery.queryPurchase()
+                     * assert whether the correct Purchase is returned
+                     */
+                    foldAssertHappyPath {
+                        query.queryPurchasesResult(purchaseType).bind()
+                            .purchases shouldContain purchase
                     }
 
                     // verify that a correct product type is passed to billingClient.queryPurchasesAsync(params)
@@ -188,8 +191,9 @@ class BillingQueryTest {
         }.`when`(billingClientMock)
             .queryProductDetailsAsync(any(), any())
 
-        recoverAssertHappyPath {
-            query.queryProductDetailsResult("any").productDetails shouldContain productDetailsSingleSubMock
+        foldAssertHappyPath {
+            query.queryProductDetailsResult("any").bind()
+                .productDetails shouldContain productDetailsSingleSubMock
         }
     }
 

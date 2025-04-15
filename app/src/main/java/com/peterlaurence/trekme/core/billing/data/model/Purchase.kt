@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.core.billing.data.model
 
-import arrow.core.raise.Raise
+import arrow.core.Either
+import arrow.core.raise.either
 import com.android.billingclient.api.BillingClient.BillingResponseCode.OK
 import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingResult
@@ -27,17 +28,19 @@ fun Purchase.acknowledge(
     }
 }
 
-context(Raise<CallbackFlowFailure>)
-suspend fun Purchase.assureAcknowledgement(acknowledgeFunctor: AcknowledgePurchaseFunctor): Boolean =
+suspend fun Purchase.assureAcknowledgement(
+    acknowledgeFunctor: AcknowledgePurchaseFunctor,
+): Either<CallbackFlowFailure, Boolean> = either {
     if (purchasedButNotAcknowledged) {
         callbackFlowWrapper { emit ->
-            acknowledgeFunctor(this) {
+            acknowledgeFunctor(this@assureAcknowledgement) {
                 emit {
                     it.responseCode == OK
                 }
             }
         }()
     } else false
+}
 
 fun Purchase.containsOneTime(purchaseIds: PurchaseIdsContract): Boolean =
     products.any { id -> purchaseIds.containsOneTime(id) }

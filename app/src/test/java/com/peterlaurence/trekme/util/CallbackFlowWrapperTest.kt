@@ -1,6 +1,7 @@
 package com.peterlaurence.trekme.util
 
 import arrow.core.raise.recover
+import com.peterlaurence.trekme.foldAssertHappyPath
 import com.peterlaurence.trekme.recoverAssertHappyPath
 import com.peterlaurence.trekme.shouldNotHappen
 import io.kotest.matchers.shouldBe
@@ -14,10 +15,24 @@ import kotlin.test.Test
 class CallbackFlowWrapperTest {
 
     @Test
-    fun `vanilla usage`(): Unit = runTest {
+    fun `recoverAssertHappyPath vanilla usage`(): Unit = runTest {
 
         val v = 101
         val res = recoverAssertHappyPath {
+            callbackFlowWrapper { emit ->
+                emit { v }
+            }()
+        }
+
+        res shouldBe v
+
+    }
+
+    @Test
+    fun `foldAssertHappyPath vanilla usage`(): Unit = runTest {
+
+        val v = 101
+        val res = foldAssertHappyPath {
             callbackFlowWrapper { emit ->
                 emit { v }
             }()
