@@ -56,7 +56,6 @@ android {
         freeCompilerArgs = [
                 '-Xjvm-default=all-compatibility',
                 '-opt-in=androidx.compose.material.ExperimentalMaterialApi',
-                '-Xcontext-receivers'
         ]
     }
     namespace 'com.peterlaurence.trekme'
